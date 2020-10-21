@@ -117,8 +117,8 @@ def setup_CSV(fileName):
     f = open(fileName, "w+")
     fWriter = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     fWriter.writerow([
-        'Time (s)', 'Steam Sensor 1', 'Humidity 1','Steam Sensor 2', 'Humidity 2', 'Steam Sensor 3', 'Humidity 3', 
-        'Steam Temp. (C)', 'Surrounding Humidity', 'Surrounding Temp. (C)'])
+        'Time (s)', 'Steam Sensor 1 (Count)', 'Humidity 1 (%)','Steam Sensor 2 (Count)', 'Humidity 2 (%)', 'Steam Sensor 3 (Count)', 'Humidity 3 (%)', 
+        'Steam Temp. (C)', 'Surrounding Humidity (%)', 'Surrounding Temp. (C)'])
     return f,fWriter
 
 def write_CSV(fWriter, deltaTime, ADC_Value):
@@ -141,7 +141,7 @@ def to_Humidity(raw):
 
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def average_Steam_Sensor_Humidity(df):
-    total = df['Humidity 1'].sum() + df['Humidity 2'].sum() + df['Humidity 3'].sum()
+    total = df['Humidity 1 (%)'].sum() + df['Humidity 2 (%)'].sum() + df['Humidity 3 (%)'].sum()
     rows = len(df.index)
     return total/(3*rows) * 100
 
@@ -149,23 +149,48 @@ def average_steam_temperature(df):
     return df['Steam Temp. (C)'].mean()
 
 def average_surrounding_humidity(df):
-    return df['Surrounding Humidity'].mean()
+    return df['Surrounding Humidity (%)'].mean()
 
 def average_surrounding_temperature(df):
     return df['Surrounding Temp. (C)'].mean()
     
 def steam_Accumulation(df):
      df['Delta T (s)'] = abs(df['Time (s)'].diff(periods=-1))
-     df['Steam Accumulation (Count * s)'] = (df['Steam Sensor 1'] * df['Delta T (s)']) + (df['Steam Sensor 2'] * df['Delta T (s)']) + (df['Steam Sensor 3'] * df['Delta T (s)'])
+     df['Steam Accumulation (Count * s)'] = (df['Steam Sensor 1 (Count)'] * df['Delta T (s)']) + (df['Steam Sensor 2 (Count)'] * df['Delta T (s)']) + (df['Steam Sensor 3 (Count)'] * df['Delta T (s)'])
      return df['Steam Accumulation (Count * s)'].sum()
 
 #----------------------------------------------------------------- GRAPH FUNCTION -------------------------------------------------------------------
-def steam_Accumulation_Graph(df):
-    plt.plot('Time (s)', 'Steam Sensor 1', data = df, color = 'red')
-    plt.plot('Time (s)', 'Steam Sensor 2', data = df, color = 'black')
-    plt.plot('Time (s)', 'Steam Sensor 3', data = df, color = 'blue')
+def humidity_Graph(df):
+    plt.plot('Time (s)', 'Humidity 1 (%)', data = df, color = 'red')
+    plt.plot('Time (s)', 'Humidity 2 (%)', data = df, color = 'black')
+    plt.plot('Time (s)', 'Humidity 3 (%)', data = df, color = 'blue')
+    plt.plot('Time (s)', 'Surrounding Humidity (%)', data = df, color = 'orange')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Humidity (%)')
     plt.legend()
-    plt.show()
+
+def steam_Accumulation_Graph(df):
+    plt.plot('Time (s)', 'Steam Accumulation (Count * s)', data = df, color = 'red')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Steam Accumulation (Count * s)')
+
+def temperature_Graph(df):
+    plt.plot('Time (s)', 'Steam Temp. (C)', data = df, color = 'red')
+    plt.plot('Time (s)', 'Surrounding Temp. (C)', data = df, color = 'blue')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Temperature (C)')
+    plt.legend()
+
+def steam_Fixture_Graphs(df):
+    plt.figure('Time vs. Steam Sensor\'s Humidity vs Surrounding Humidity')
+    humidity_Graph(df)
+
+    plt.figure('Time vs. Steam Accumulation')
+    steam_Accumulation_Graph(df)
+
+    plt.figure('Time vs. Steam Temperature vs Surrounding Temperature')
+    temperature_Graph(df)
+    
 
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
@@ -196,7 +221,8 @@ def main():
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
             print('Steam Accumulation - Steam Sensor Average Humidity: {0:.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
-            steam_Accumulation_Graph(df)
+            steam_Fixture_Graphs(df)
+            plt.show()
             counter = counter + 1
         except :
             GPIO.cleanup()
