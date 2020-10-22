@@ -167,29 +167,35 @@ def humidity_Graph(df):
     plt.plot('Time (s)', 'Surrounding Humidity (%)', data = df, color = 'orange')
     plt.xlabel('Time (s)')
     plt.ylabel('Humidity (%)')
+    plt.title('Time vs. Steam Sensor\'s Humidity vs Surrounding Humidity')
     plt.legend()
 
 def steam_Accumulation_Graph(df):
     plt.plot('Time (s)', 'Steam Accumulation (Count * s)', data = df, color = 'red')
     plt.xlabel('Time (s)')
     plt.ylabel('Steam Accumulation (Count * s)')
+    plt.title('Time vs. Steam Accumulation')
 
 def temperature_Graph(df):
     plt.plot('Time (s)', 'Steam Temp. (C)', data = df, color = 'red')
     plt.plot('Time (s)', 'Surrounding Temp. (C)', data = df, color = 'blue')
     plt.xlabel('Time (s)')
     plt.ylabel('Temperature (C)')
+    plt.title('Time vs. Steam Temperature vs Surrounding Temperature')
     plt.legend()
 
 def steam_Fixture_Graphs(df):
-    plt.figure('Time vs. Steam Sensor\'s Humidity vs Surrounding Humidity')
+    plt.figure()
+    plt.subplot(311)
     humidity_Graph(df)
 
-    plt.figure('Time vs. Steam Accumulation')
+    plt.subplot(312)
     steam_Accumulation_Graph(df)
 
-    plt.figure('Time vs. Steam Temperature vs Surrounding Temperature')
+    plt.subplot(313)
     temperature_Graph(df)
+
+    plt.tight_layout()
     
 
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
