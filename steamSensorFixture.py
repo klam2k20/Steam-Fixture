@@ -187,26 +187,38 @@ def temperature_Graph(df):
 def steam_Fixture_Graphs(df):
     plt.figure()
     plt.subplot(311)
-    humidity_Graph(df)
+    steam_Accumulation_Graph(df)
 
     plt.subplot(312)
-    steam_Accumulation_Graph(df)
+    humidity_Graph(df)
 
     plt.subplot(313)
     temperature_Graph(df)
 
     plt.tight_layout()
     
+#----------------------------------------------------------------- INPUT FUNCTIONS -------------------------------------------------------------------
+def check_str(string):
+    while 1:
+        if type(string) == str:
+            return string
+        print('\n Input must be a string')
+
+def check_non_negative(number):
+    while 1:
+        if (type(number) == float or type(number) == int) and (number >= 0):
+            return number
+        print('\n Input must be a non-negative value')
 
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
-    global DATE, DISTANCE_FROM_SENSOR, FOOD_INPUTTED, COOKING_TIME
+    global FOOD_INPUTTED, COOKING_TIME
     counter = 0
     new_Dir()
     while 1:
-        FOOD_INPUTTED = input('Food: ')
-        COOKING_TIME = int(input('Cooking Time (s): '))
-        DISTANCE_FROM_SENSOR = int(input('Sensor Height (in): '))
+        FOOD_INPUTTED = check_str(input('Food: '))
+        COOKING_TIME = check_non_negative(input('Cooking Time (s): '))
+        DISTANCE_FROM_SENSOR = check_non_negative(input('Sensor Height (in): '))
         fileName = new_CSV(counter)
         print('Start Cooking')
         f, fWriter = setup_CSV(fileName)
