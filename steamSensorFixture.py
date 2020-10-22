@@ -95,53 +95,40 @@ def email_send(fileName):
     server.close()
     print("Email sent")
 
-#--------------------------------------------------------------------- CSV FUNCTIONS -----------------------------------------------------------------------
-def new_Dir():
+#--------------------------------------------------------------------- DIRECTORY FUNCTION -----------------------------------------------------------------------
+def new_Dir(counter):
     global DATE
-    path = os.getcwd() + '/' + 'RAW DATA' 
-    file_path = path + "/" + DATE[1] + DATE[2] + DATE[4]
-    if not os.path.exists(path):
-        os.mkdir(path)
+    path1 = os.getcwd() + '/' + 'RAW DATA'
+    path2 = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
+    file_path = path2 + "/" + str(counter)
+    if not os.path.exists(path1):
+        os.mkdir(path1)
+        os.mkdir(path2)
+        os.mkdir(file_path)
+    elif not os.path.exists(path2):
+        os.mkdir(path2)
         os.mkdir(file_path)
     elif not os.path.exists(file_path):
         os.mkdir(file_path)
     os.chdir(file_path)
         
-
-def new_CSV(counter):
-    global FOOD_INPUTTED, DISTANCE_FROM_SENSOR
-    return 'STEAM_SENSOR_FIXTURE_' + FOOD_INPUTTED + '_' +  str(DISTANCE_FROM_SENSOR) + 'in_' + str(counter) + '.csv'
-
-def setup_CSV(fileName):
-    global DISTANCE_FROM_SENSOR
-    f = open(fileName, "w+")
-    fWriter = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    fWriter.writerow([
-        'Time (s)', 'Steam Sensor 1 (Count)', 'Humidity 1 (%)','Steam Sensor 2 (Count)', 'Humidity 2 (%)', 'Steam Sensor 3 (Count)', 'Humidity 3 (%)', 
-        'Steam Temp. (C)', 'Surrounding Humidity (%)', 'Surrounding Temp. (C)'])
-    return f,fWriter
-
-def write_CSV(fWriter, deltaTime, ADC_Value):
-    global TEMP_PROBE_STEAM, TEMP_PROBE_SURR, STEAM_SENSOR1, STEAM_SENSOR2, STEAM_SENSOR3, HUMIDITY_SENSOR, HUMIDITY
-    surr_humidity = read_humidity(HUMIDITY, HUMIDITY_SENSOR)
-    fWriter.writerow([
-                    "{:.2f}".format(deltaTime),ADC_Value[STEAM_SENSOR1],to_Humidity(ADC_Value[STEAM_SENSOR1]),
-                     ADC_Value[STEAM_SENSOR2],to_Humidity(ADC_Value[STEAM_SENSOR2]),
-                     ADC_Value[STEAM_SENSOR3],to_Humidity(ADC_Value[STEAM_SENSOR3]),
-                    read_temp(TEMP_PROBE_STEAM), surr_humidity, read_temp(TEMP_PROBE_SURR)])
+#--------------------------------------------------------------------- EXCEL FUNCTION -----------------------------------------------------------------------
+def excel_FileName(counter):
+    global FOOD_INPUTTED, DISTANCE_FROM_SENSOR, COOKING_TIME
+    return FOOD_INPUTTED + '_' +  str(DISTANCE_FROM_SENSOR) + 'in_' + str(COOKING_TIME) + 'min_' + str(counter) + '.xlsx'
 
 #--------------------------------------------------------------------- HELPER FUNCTIONS --------------------------------------------------------------------
 def update_Delta_Time(start):
     currentTime = time.time()
     deltaTime = currentTime - start
-    return deltaTime
+    return deltaTime/60.0
 
 def to_Humidity(raw):
     return raw/0x7fffff
 
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def dataframe_Structure():
-    columns = {'Time (s)':[], 'Steam Sensor 1 (Count)':[], 'Humidity 1 (%)':[],'Steam Sensor 2 (Count)':[], 'Humidity 2 (%)':[], 
+    columns = {'Time (min)':[], 'Steam Sensor 1 (Count)':[], 'Humidity 1 (%)':[],'Steam Sensor 2 (Count)':[], 'Humidity 2 (%)':[], 
             'Steam Sensor 3 (Count)':[], 'Humidity 3 (%)':[], 'Steam Temp. (C)':[], 'Surrounding Humidity (%)':[], 
             'Surrounding Temp. (C)':[]}
     df = pd.DataFrame(columns)
@@ -150,12 +137,12 @@ def dataframe_Structure():
 def update_Dataframe(deltaTime, ADC_Value, df):
     global TEMP_PROBE_STEAM, TEMP_PROBE_SURR, STEAM_SENSOR1, STEAM_SENSOR2, STEAM_SENSOR3, HUMIDITY_SENSOR, HUMIDITY
     surr_humidity = read_humidity(HUMIDITY, HUMIDITY_SENSOR)
-    new_row = {'Time (s)':["{:.2f}".format(deltaTime)], 
-                'Steam Sensor 1 (Count)':[ADC_Value[STEAM_SENSOR1]], 'Humidity 1 (%)':[to_Humidity(ADC_Value[STEAM_SENSOR1])],
-                'Steam Sensor 2 (Count)':[ADC_Value[STEAM_SENSOR2]], 'Humidity 2 (%)':[to_Humidity(ADC_Value[STEAM_SENSOR2])], 
-                'Steam Sensor 3 (Count)':[ADC_Value[STEAM_SENSOR3]], 'Humidity 3 (%)':[to_Humidity(ADC_Value[STEAM_SENSOR3])], 
-                'Steam Temp. (C)':[read_temp(TEMP_PROBE_STEAM)], 'Surrounding Humidity (%)':[surr_humidity], 
-                'Surrounding Temp. (C)':[read_temp(TEMP_PROBE_SURR)]}
+    new_row = {'Time (min)':deltaTime, 
+                'Steam Sensor 1 (Count)':ADC_Value[STEAM_SENSOR1], 'Humidity 1 (%)':to_Humidity(ADC_Value[STEAM_SENSOR1]),
+                'Steam Sensor 2 (Count)':ADC_Value[STEAM_SENSOR2], 'Humidity 2 (%)':to_Humidity(ADC_Value[STEAM_SENSOR2]), 
+                'Steam Sensor 3 (Count)':ADC_Value[STEAM_SENSOR3], 'Humidity 3 (%)':to_Humidity(ADC_Value[STEAM_SENSOR3]), 
+                'Steam Temp. (C)':read_temp(TEMP_PROBE_STEAM), 'Surrounding Humidity (%)':surr_humidity, 
+                'Surrounding Temp. (C)':read_temp(TEMP_PROBE_SURR)}
     df = df.append(new_row, ignore_index = True)
     return df
                     
@@ -174,31 +161,31 @@ def average_surrounding_temperature(df):
     return df['Surrounding Temp. (C)'].mean()
     
 def steam_Accumulation(df):
-     df['Delta T (s)'] = abs(df['Time (s)'].diff(periods=-1))
-     df['Steam Accumulation (Count * s)'] = (df['Steam Sensor 1 (Count)'] * df['Delta T (s)']) + (df['Steam Sensor 2 (Count)'] * df['Delta T (s)']) + (df['Steam Sensor 3 (Count)'] * df['Delta T (s)'])
-     return df['Steam Accumulation (Count * s)'].sum()
+    df['Delta T (min)'] = abs(df['Time (min)'].diff(periods=-1))
+    df['Steam Accumulation (Count * min)'] = (df['Steam Sensor 1 (Count)'] * df['Delta T (min)']) + (df['Steam Sensor 2 (Count)'] * df['Delta T (min)']) + (df['Steam Sensor 3 (Count)'] * df['Delta T (min)'])
+    return df['Steam Accumulation (Count * min)'].sum()
 
 #----------------------------------------------------------------- GRAPH FUNCTION -------------------------------------------------------------------
 def humidity_Graph(df):
-    plt.plot('Time (s)', 'Humidity 1 (%)', data = df, color = 'red')
-    plt.plot('Time (s)', 'Humidity 2 (%)', data = df, color = 'black')
-    plt.plot('Time (s)', 'Humidity 3 (%)', data = df, color = 'blue')
-    plt.plot('Time (s)', 'Surrounding Humidity (%)', data = df, color = 'orange')
-    plt.xlabel('Time (s)')
+    plt.plot('Time (min)', 'Humidity 1 (%)', data = df, color = 'red')
+    plt.plot('Time (min)', 'Humidity 2 (%)', data = df, color = 'black')
+    plt.plot('Time (min)', 'Humidity 3 (%)', data = df, color = 'blue')
+    plt.plot('Time (min)', 'Surrounding Humidity (%)', data = df, color = 'orange')
+    plt.xlabel('Time (min)')
     plt.ylabel('Humidity (%)')
     plt.title('Time vs. Steam Sensor\'s Humidity vs Surrounding Humidity')
     plt.legend()
 
 def steam_Accumulation_Graph(df):
-    plt.plot('Time (s)', 'Steam Accumulation (Count * s)', data = df, color = 'red')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Steam Accumulation (Count * s)')
+    plt.plot('Time (min)', 'Steam Accumulation (Count * min)', 'o', data = df, color = 'red')
+    plt.xlabel('Time (min)')
+    plt.ylabel('Steam Accum. (Count * min)')
     plt.title('Time vs. Steam Accumulation')
 
 def temperature_Graph(df):
-    plt.plot('Time (s)', 'Steam Temp. (C)', data = df, color = 'red')
-    plt.plot('Time (s)', 'Surrounding Temp. (C)', data = df, color = 'blue')
-    plt.xlabel('Time (s)')
+    plt.plot('Time (min)', 'Steam Temp. (C)', data = df, color = 'red')
+    plt.plot('Time (min)', 'Surrounding Temp. (C)', data = df, color = 'blue')
+    plt.xlabel('Time (min)')
     plt.ylabel('Temperature (C)')
     plt.title('Time vs. Steam Temperature vs Surrounding Temperature')
     plt.legend()
@@ -216,7 +203,7 @@ def steam_Fixture_Graphs(df):
 
     plt.tight_layout()
     
-#----------------------------------------------------------------- INPUT FUNCTIONS -------------------------------------------------------------------
+#----------------------------------------------------------------- CHECK INPUT FUNCTIONS -------------------------------------------------------------------
 def check_non_negative(num):
     return num >= 0
     
@@ -249,38 +236,32 @@ def check_float_input(phrase):
 def main():
     global DISTANCE_FROM_SENSOR, FOOD_INPUTTED, COOKING_TIME, FINAL_MASS, INITIAL_MASS
     counter = 0
-    new_Dir()
+    new_Dir(counter)
     while 1:
         FOOD_INPUTTED = check_string_input('Food: ')
-        COOKING_TIME = check_float_input('Cooking Time (s): ')
+        COOKING_TIME = check_float_input('Cooking Time (min): ') 
         DISTANCE_FROM_SENSOR = check_float_input('Sensor Height (in): ')
-        INITIAL_MASS = check_float_input('Initial Mass (g):')
-        #df = dataframe_Structure()
-        fileName = new_CSV(counter)
-        print('Start Cooking')
-        f, fWriter = setup_CSV(fileName)
-        startTime = time.time()
-        deltaTime = 0
+        INITIAL_MASS = check_float_input('Initial Mass (g): ')
+
         try:
+            df = dataframe_Structure()
+            print('Start Cooking')
+            startTime = time.time()
+            deltaTime = 0
             ADC = ADS1256.ADS1256()
             ADC.ADS1256_init()
             while (deltaTime < COOKING_TIME):
                 ADC_Value = ADC.ADS1256_GetAll()
                 deltaTime = update_Delta_Time(startTime)
-                #update_Dataframe(deltaTime, ADC_Value, df)
-                write_CSV(fWriter, deltaTime, ADC_Value)
+                df = update_Dataframe(deltaTime, ADC_Value, df)
                 time.sleep(2)
-            f.close()
-            email_send(fileName)
-            FINAL_MASS = check_non_negative(input('Final Mass (g):'))
-            path = os.getcwd() + '/' + fileName
-            df = pd.read_csv(path)
-            FINAL_MASS = check_float_input('Final Mass (g):')
+
+            FINAL_MASS = check_float_input('Final Mass (g): ')
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
             print('Steam Accumulation - Steam Sensor Average Humidity: {0:.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
-            print('Water Loss (g): {0:.2f}'.format(FINAL_MASS - INITIAL_MASS))
-            df.to_excel("output.xlsx", sheet_name='Sheet_name_1')  
+            print('Water Loss (g): {0:.2f}'.format(INITIAL_MASS - FINAL_MASS))
+            df.to_excel(excel_FileName(counter), sheet_name= 'Raw_Steam_Fixture_Data')
             steam_Fixture_Graphs(df)
             plt.show()
             counter = counter + 1
