@@ -212,13 +212,14 @@ def check_non_negative(number):
 
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
-    global FOOD_INPUTTED, COOKING_TIME
+    global DISTANCE_FROM_SENSOR, FOOD_INPUTTED, COOKING_TIME, FINAL_MASS, INITIAL_MASS
     counter = 0
     new_Dir()
     while 1:
         FOOD_INPUTTED = check_str(input('Food: '))
         COOKING_TIME = check_non_negative(input('Cooking Time (s): '))
         DISTANCE_FROM_SENSOR = check_non_negative(input('Sensor Height (in): '))
+        INITIAL_MASS = check_non_negative(input('Initial Mass (g):'))
         fileName = new_CSV(counter)
         print('Start Cooking')
         f, fWriter = setup_CSV(fileName)
@@ -234,11 +235,13 @@ def main():
                 time.sleep(2)
             f.close()
             email_send(fileName)
+            FINAL_MASS = check_non_negative(input('Final Mass (g):'))
             path = os.getcwd() + '/' + fileName
             df = pd.read_csv(path)
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
             print('Steam Accumulation - Steam Sensor Average Humidity: {0:.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
+            print('Water Loss (g): {0:.2f}'.format(FINAL_MASS - INITIAL_MASS))
             steam_Fixture_Graphs(df)
             plt.show()
             counter = counter + 1
