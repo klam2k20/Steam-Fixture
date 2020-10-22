@@ -140,6 +140,25 @@ def to_Humidity(raw):
     return raw/0x7fffff
 
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
+def dataframe_Structure():
+    columns = {'Time (s)':[], 'Steam Sensor 1 (Count)':[], 'Humidity 1 (%)':[],'Steam Sensor 2 (Count)':[], 'Humidity 2 (%)':[], 
+            'Steam Sensor 3 (Count)':[], 'Humidity 3 (%)':[], 'Steam Temp. (C)':[], 'Surrounding Humidity (%)':[], 
+            'Surrounding Temp. (C)':[]}
+    df = pd.DataFrame(columns)
+    return df
+
+def update_Dataframe(deltaTime, ADC_Value, df):
+    global TEMP_PROBE_STEAM, TEMP_PROBE_SURR, STEAM_SENSOR1, STEAM_SENSOR2, STEAM_SENSOR3, HUMIDITY_SENSOR, HUMIDITY
+    surr_humidity = read_humidity(HUMIDITY, HUMIDITY_SENSOR)
+    new_row = {'Time (s)':["{:.2f}".format(deltaTime)], 
+                'Steam Sensor 1 (Count)':[ADC_Value[STEAM_SENSOR1]], 'Humidity 1 (%)':[to_Humidity(ADC_Value[STEAM_SENSOR1])],
+                'Steam Sensor 2 (Count)':[ADC_Value[STEAM_SENSOR2]], 'Humidity 2 (%)':[to_Humidity(ADC_Value[STEAM_SENSOR2])], 
+                'Steam Sensor 3 (Count)':[ADC_Value[STEAM_SENSOR3]], 'Humidity 3 (%)':[to_Humidity(ADC_Value[STEAM_SENSOR3])], 
+                'Steam Temp. (C)':[read_temp(TEMP_PROBE_STEAM)], 'Surrounding Humidity (%)':[surr_humidity], 
+                'Surrounding Temp. (C)':[read_temp(TEMP_PROBE_SURR)]}
+    df = df.append(new_row, ignore_index = True)
+    return df
+                    
 def average_Steam_Sensor_Humidity(df):
     total = df['Humidity 1 (%)'].sum() + df['Humidity 2 (%)'].sum() + df['Humidity 3 (%)'].sum()
     rows = len(df.index)
@@ -198,17 +217,33 @@ def steam_Fixture_Graphs(df):
     plt.tight_layout()
     
 #----------------------------------------------------------------- INPUT FUNCTIONS -------------------------------------------------------------------
-def check_str(string):
-    while 1:
-        if type(string) == str:
-            return string
-        print('\n Input must be a string')
+def check_non_negative(num):
+    return num >= 0
+    
+def check_float(num):
+    try:
+        float(num)
+        return True
+    except ValueError:
+        return False
 
-def check_non_negative(number):
+def check_string_input(phrase):
     while 1:
-        if (type(number) == float or type(number) == int) and (number >= 0):
-            return number
-        print('\n Input must be a non-negative value')
+        string = input(phrase)
+        if not check_float(string):
+            return string
+        else:
+            print('Input must be a string value.')
+
+def check_float_input(phrase):
+    while 1:
+        num = input(phrase)
+        if check_float(num) and check_non_negative(float(num)):
+            return float(num)
+        elif check_float(num) and not check_non_negative(float(num)):
+            print('Input must be a non-negative value.')
+        else:
+            print('Input must be a float or integer.')
 
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
@@ -216,10 +251,11 @@ def main():
     counter = 0
     new_Dir()
     while 1:
-        FOOD_INPUTTED = check_str(input('Food: '))
-        COOKING_TIME = check_non_negative(input('Cooking Time (s): '))
-        DISTANCE_FROM_SENSOR = check_non_negative(input('Sensor Height (in): '))
-        INITIAL_MASS = check_non_negative(input('Initial Mass (g):'))
+        FOOD_INPUTTED = check_string_input('Food: ')
+        COOKING_TIME = check_float_input('Cooking Time (s): ')
+        DISTANCE_FROM_SENSOR = check_float_input('Sensor Height (in): ')
+        INITIAL_MASS = check_float_input('Initial Mass (g):')
+        #df = dataframe_Structure()
         fileName = new_CSV(counter)
         print('Start Cooking')
         f, fWriter = setup_CSV(fileName)
@@ -231,6 +267,7 @@ def main():
             while (deltaTime < COOKING_TIME):
                 ADC_Value = ADC.ADS1256_GetAll()
                 deltaTime = update_Delta_Time(startTime)
+                #update_Dataframe(deltaTime, ADC_Value, df)
                 write_CSV(fWriter, deltaTime, ADC_Value)
                 time.sleep(2)
             f.close()
@@ -238,10 +275,12 @@ def main():
             FINAL_MASS = check_non_negative(input('Final Mass (g):'))
             path = os.getcwd() + '/' + fileName
             df = pd.read_csv(path)
+            FINAL_MASS = check_float_input('Final Mass (g):')
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
             print('Steam Accumulation - Steam Sensor Average Humidity: {0:.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
             print('Water Loss (g): {0:.2f}'.format(FINAL_MASS - INITIAL_MASS))
+            df.to_excel("output.xlsx", sheet_name='Sheet_name_1')  
             steam_Fixture_Graphs(df)
             plt.show()
             counter = counter + 1
