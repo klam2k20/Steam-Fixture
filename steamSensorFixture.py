@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import xlsxwriter
 import os
 import time
 import glob
@@ -7,6 +8,7 @@ import ADS1256
 import Adafruit_DHT
 import RPi.GPIO as GPIO
 import csv
+import numpy as np
 import pandas as pd
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -20,6 +22,7 @@ INITIAL_MASS = 0
 FINAL_MASS = 0
 FOOD_INPUTTED = ''
 COOKING_TIME = 0
+TIME_INTERVAL = 1
 
 STEAM_SENSOR1 = 6
 STEAM_SENSOR2 = 5
@@ -99,14 +102,9 @@ def email_send(fileName):
 def new_Dir(counter):
     global DATE
     path1 = os.getcwd() + '/' + 'RAW DATA'
-    path2 = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
-    file_path = path2 + "/" + str(counter)
+    file_path = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
     if not os.path.exists(path1):
         os.mkdir(path1)
-        os.mkdir(path2)
-        os.mkdir(file_path)
-    elif not os.path.exists(path2):
-        os.mkdir(path2)
         os.mkdir(file_path)
     elif not os.path.exists(file_path):
         os.mkdir(file_path)
@@ -114,9 +112,18 @@ def new_Dir(counter):
         
 #--------------------------------------------------------------------- EXCEL FUNCTION -----------------------------------------------------------------------
 def excel_FileName(counter):
-    global FOOD_INPUTTED, DISTANCE_FROM_SENSOR, COOKING_TIME
-    return FOOD_INPUTTED + '_' +  str(DISTANCE_FROM_SENSOR) + 'in_' + str(COOKING_TIME) + 'min_' + str(counter) + '.xlsx'
+    return 'Steam_Fixture_' + str(counter) + '.xlsx'
 
+def dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum):
+    global FOOD_INPUTTED, COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS
+    input_df = input_to_df(FOOD_INPUTTED, COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum)
+    writer = pd.ExcelWriter(excel_FileName(counter), engine='xlsxwriter')
+    df.to_excel(writer, sheet_name= 'Raw_Steam_Fixture_Data')
+    input_df.to_excel(writer, sheet_name= 'Procedure_Results_Data')
+    workbook = writer.book
+    worksheet = workbook.add_worksheet('Graphs')
+    worksheet.insert_image(0,0,'Steam_Fixture_Graphs.png')
+    writer.save()
 #--------------------------------------------------------------------- HELPER FUNCTIONS --------------------------------------------------------------------
 def update_Delta_Time(start):
     currentTime = time.time()
@@ -125,6 +132,17 @@ def update_Delta_Time(start):
 
 def to_Humidity(raw):
     return raw/0x7fffff
+
+def format_best_fit_eq(m,b):
+    return 'y = ' + '{0:.2f}'.format(m) + 'x +' + '{0:.2f}'.format(b)
+
+def input_to_df(FOOD_INPUTTED, COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum):
+    input_dict = {'Food Load':['Cook Time (min)', 'Time Interval (min)', 'Sensor Height (in)', 'Initial Mass (g)', 'Final Mass (g)', 'Water Loss (g)',
+                               'Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)'],
+                    str(FOOD_INPUTTED): [COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS, INITIAL_MASS - FINAL_MASS,
+                                         average_Sensor_Humidity, steam_Accum] }
+    input_df = pd.DataFrame(input_dict)
+    return input_df
 
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def dataframe_Structure():
@@ -174,13 +192,30 @@ def humidity_Graph(df):
     plt.xlabel('Time (min)')
     plt.ylabel('Humidity (%)')
     plt.title('Time vs. Steam Sensor\'s Humidity vs Surrounding Humidity')
-    plt.legend()
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-def steam_Accumulation_Graph(df):
+def steam_Accumulation_Graph(df, time_interval):
+    global COOKING_TIME
+    start_Interval = df.iloc[0]['Time (min)']
+    end_Interval = start_Interval + time_interval
+    legend = []
+    label = []
+    while start_Interval < COOKING_TIME:
+        df2 = df.loc[(df['Time (min)'] >= start_Interval) & (df['Time (min)'] <= end_Interval)]
+        x = df2['Time (min)']
+        y = df2['Steam Accumulation (Count * min)']
+        m,b = np.polyfit(x,y,1)
+        plt.plot(x,y,'ro')
+        best_fit, = plt.plot(x, m*x+b)
+        legend.append(best_fit,)
+        label.append(format_best_fit_eq(m,b))
+        start_Interval = end_Interval
+        end_Interval = start_Interval + time_interval
     plt.plot('Time (min)', 'Steam Accumulation (Count * min)', 'o', data = df, color = 'red')
     plt.xlabel('Time (min)')
     plt.ylabel('Steam Accum. (Count * min)')
     plt.title('Time vs. Steam Accumulation')
+    plt.legend(legend, label,loc='center left', bbox_to_anchor=(1, 0.5))
 
 def temperature_Graph(df):
     plt.plot('Time (min)', 'Steam Temp. (C)', data = df, color = 'red')
@@ -188,12 +223,12 @@ def temperature_Graph(df):
     plt.xlabel('Time (min)')
     plt.ylabel('Temperature (C)')
     plt.title('Time vs. Steam Temperature vs Surrounding Temperature')
-    plt.legend()
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-def steam_Fixture_Graphs(df):
-    plt.figure()
+def steam_Fixture_Graphs(df,time_interval):
+    plt.figure(num=None, figsize=(10, 10), dpi=80, facecolor='w', edgecolor='k')
     plt.subplot(311)
-    steam_Accumulation_Graph(df)
+    steam_Accumulation_Graph(df,time_interval)
 
     plt.subplot(312)
     humidity_Graph(df)
@@ -232,20 +267,28 @@ def check_float_input(phrase):
         else:
             print('Input must be a float or integer.')
 
+def check_time_interval_input(phrase, end):
+    while 1:
+        num = input(phrase)
+        if check_float(num) and check_non_negative(float(num)) and float(num) < end:
+            return float(num)
+        else:
+            print('Input must be a non-negative float or integer less than the cook duration.')
+
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
     global DISTANCE_FROM_SENSOR, FOOD_INPUTTED, COOKING_TIME, FINAL_MASS, INITIAL_MASS
     counter = 0
     new_Dir(counter)
     while 1:
-        FOOD_INPUTTED = check_string_input('Food: ')
-        COOKING_TIME = check_float_input('Cooking Time (min): ') 
+        FOOD_INPUTTED = check_string_input('Food Load: ')
+        COOKING_TIME = check_float_input('Cook Time (min): ')
+        TIME_INTERVAL = check_time_interval_input('Time Interval (min): ', COOKING_TIME)
         DISTANCE_FROM_SENSOR = check_float_input('Sensor Height (in): ')
         INITIAL_MASS = check_float_input('Initial Mass (g): ')
 
         try:
             df = dataframe_Structure()
-            print('Start Cooking')
             startTime = time.time()
             deltaTime = 0
             ADC = ADS1256.ADS1256()
@@ -259,10 +302,11 @@ def main():
             FINAL_MASS = check_float_input('Final Mass (g): ')
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
-            print('Steam Accumulation - Steam Sensor Average Humidity: {0:.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
             print('Water Loss (g): {0:.2f}'.format(INITIAL_MASS - FINAL_MASS))
-            df.to_excel(excel_FileName(counter), sheet_name= 'Raw_Steam_Fixture_Data')
-            steam_Fixture_Graphs(df)
+            print('Steam Accumulation - Steam Sensor Average Humidity: {0:.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
+            steam_Fixture_Graphs(df,TIME_INTERVAL)
+            plt.savefig('Steam_Fixture_Graphs.png')
+            dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum)
             plt.show()
             counter = counter + 1
         except :
