@@ -16,14 +16,6 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 #------------------------------------------------------------------ CONSTANTS & VARIABLES ------------------------------------------------------------------
-DISTANCE_FROM_SENSOR = 0
-NUMBER_OF_STEAM_SENSORS = 3
-INITIAL_MASS = 0
-FINAL_MASS = 0
-FOOD_INPUTTED = ''
-COOKING_TIME = 0
-TIME_INTERVAL = 1
-
 STEAM_SENSOR1 = 6
 STEAM_SENSOR2 = 5
 STEAM_SENSOR3 = 4
@@ -31,10 +23,6 @@ TEMP_PROBE_STEAM = '28-03049779ac6a'
 TEMP_PROBE_SURR = '28-03049779d2c1'
 HUMIDITY = Adafruit_DHT.DHT11
 HUMIDITY_SENSOR = 16
-
-EMAIL_SEND = "rtesting708@gmail.com"
-EMAIL_RECEIVE = "etesting604@gmail.com"
-EMAIL_PASSWORD = "Poohbear1!"
  
 DATE = time.ctime().split(' ')
 PREVIOUS_SURR_HUM = 0
@@ -68,8 +56,9 @@ def read_temp(id):
         return temp_c
 
 #-------------------------------------------------------------------- EMAIL FUNCTIONS ----------------------------------------------------------------------
-def email_send(fileName):
-    global EMAIL_SEND, EMAIL_RECEIVE, EMAIL_PASSWORD
+def email_Send(fileName, EMAIL_RECEIVE):
+    EMAIL_SEND = "rtesting708@gmail.com"
+    EMAIL_PASSWORD = "Poohbear1!"
     print("Sending email")
     subject =  fileName
     msg = MIMEMultipart()
@@ -111,13 +100,12 @@ def new_Dir(counter):
     os.chdir(file_path)
         
 #--------------------------------------------------------------------- EXCEL FUNCTION -----------------------------------------------------------------------
-def excel_FileName(counter):
+def excel_FileName(counter, SENSOR_HEIGHT):
     return 'Steam_Fixture_' + str(counter) + '.xlsx'
 
-def dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum):
-    global FOOD_INPUTTED, COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS
-    input_df = input_to_df(FOOD_INPUTTED, COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum)
-    writer = pd.ExcelWriter(excel_FileName(counter), engine='xlsxwriter')
+def dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION):
+    input_df = input_to_df(FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum, STEAM_APPLIANCE, FUNCTION)
+    writer = pd.ExcelWriter(excel_FileName(counter, SENSOR_HEIGHT), engine='xlsxwriter')
     df.to_excel(writer, sheet_name= 'Raw_Steam_Fixture_Data')
     input_df.to_excel(writer, sheet_name= 'Procedure_Results_Data')
     workbook = writer.book
@@ -131,15 +119,15 @@ def update_Delta_Time(start):
     return deltaTime/60.0
 
 def to_Humidity(raw):
-    return raw/0x7fffff
+    return (raw/0x7fffff) * 100.00
 
 def format_best_fit_eq(m,b):
     return 'y = ' + '{0:.2f}'.format(m) + 'x +' + '{0:.2f}'.format(b)
 
-def input_to_df(FOOD_INPUTTED, COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum):
-    input_dict = {'Food Load':['Cook Time (min)', 'Time Interval (min)', 'Sensor Height (in)', 'Initial Mass (g)', 'Final Mass (g)', 'Water Loss (g)',
+def input_to_df(FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum, STEAM_APPLIANCE, FUNCTION):
+    input_dict = {'Steam Appliance':['Function', 'Food Load', 'Cook Time (min)', 'Time Interval (min)', 'Sensor Height (in)', 'Initial Mass (g)', 'Final Mass (g)', 'Water Loss (g)',
                                'Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)'],
-                    str(FOOD_INPUTTED): [COOKING_TIME, TIME_INTERVAL, DISTANCE_FROM_SENSOR, INITIAL_MASS, FINAL_MASS, INITIAL_MASS - FINAL_MASS,
+                    STEAM_APPLIANCE: [FUNCTION, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, INITIAL_MASS - FINAL_MASS,
                                          average_Sensor_Humidity, steam_Accum] }
     input_df = pd.DataFrame(input_dict)
     return input_df
@@ -167,7 +155,7 @@ def update_Dataframe(deltaTime, ADC_Value, df):
 def average_Steam_Sensor_Humidity(df):
     total = df['Humidity 1 (%)'].sum() + df['Humidity 2 (%)'].sum() + df['Humidity 3 (%)'].sum()
     rows = len(df.index)
-    return total/(3*rows) * 100
+    return total/(3*rows)
 
 def average_steam_temperature(df):
     return df['Steam Temp. (C)'].mean()
@@ -194,13 +182,12 @@ def humidity_Graph(df):
     plt.title('Time vs. Steam Sensor\'s Humidity vs Surrounding Humidity')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-def steam_Accumulation_Graph(df, time_interval):
-    global COOKING_TIME
+def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
     start_Interval = df.iloc[0]['Time (min)']
     end_Interval = start_Interval + time_interval
     legend = []
     label = []
-    while start_Interval < COOKING_TIME:
+    while start_Interval < MONITOR_TIME:
         df2 = df.loc[(df['Time (min)'] >= start_Interval) & (df['Time (min)'] <= end_Interval)]
         x = df2['Time (min)']
         y = df2['Steam Accumulation (Count * min)']
@@ -225,10 +212,10 @@ def temperature_Graph(df):
     plt.title('Time vs. Steam Temperature vs Surrounding Temperature')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-def steam_Fixture_Graphs(df,time_interval):
+def steam_Fixture_Graphs(df,time_interval, MONITOR_TIME):
     plt.figure(num=None, figsize=(10, 10), dpi=80, facecolor='w', edgecolor='k')
     plt.subplot(311)
-    steam_Accumulation_Graph(df,time_interval)
+    steam_Accumulation_Graph(df,time_interval,MONITOR_TIME)
 
     plt.subplot(312)
     humidity_Graph(df)
@@ -240,7 +227,7 @@ def steam_Fixture_Graphs(df,time_interval):
     
 #----------------------------------------------------------------- CHECK INPUT FUNCTIONS -------------------------------------------------------------------
 def check_non_negative(num):
-    return num >= 0
+    return num > 0
     
 def check_float(num):
     try:
@@ -263,28 +250,29 @@ def check_float_input(phrase):
         if check_float(num) and check_non_negative(float(num)):
             return float(num)
         elif check_float(num) and not check_non_negative(float(num)):
-            print('Input must be a non-negative value.')
+            print('Input must be a positive value.')
         else:
             print('Input must be a float or integer.')
 
 def check_time_interval_input(phrase, end):
     while 1:
         num = input(phrase)
-        if check_float(num) and check_non_negative(float(num)) and float(num) < end:
+        if check_float(num) and check_non_negative(float(num)) and float(num) <= end:
             return float(num)
         else:
-            print('Input must be a non-negative float or integer less than the cook duration.')
+            print('Input must be a positive float or integer less than or equal to the cook duration.')
 
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
-    global DISTANCE_FROM_SENSOR, FOOD_INPUTTED, COOKING_TIME, FINAL_MASS, INITIAL_MASS
     counter = 0
     new_Dir(counter)
     while 1:
-        FOOD_INPUTTED = check_string_input('Food Load: ')
-        COOKING_TIME = check_float_input('Cook Time (min): ')
-        TIME_INTERVAL = check_time_interval_input('Time Interval (min): ', COOKING_TIME)
-        DISTANCE_FROM_SENSOR = check_float_input('Sensor Height (in): ')
+        STEAM_APPLIANCE = input('Steam Appliance: ')
+        FUNCTION = input('Function: ')
+        FOOD_LOAD = check_string_input('Food Load: ')
+        MONITOR_TIME = check_float_input('Monitor Time (min): ')
+        TIME_INTERVAL = check_time_interval_input('Time Interval (min): ', MONITOR_TIME)
+        SENSOR_HEIGHT = check_float_input('Sensor Height (in): ')
         INITIAL_MASS = check_float_input('Initial Mass (g): ')
 
         try:
@@ -293,7 +281,7 @@ def main():
             deltaTime = 0
             ADC = ADS1256.ADS1256()
             ADC.ADS1256_init()
-            while (deltaTime < COOKING_TIME):
+            while (deltaTime < MONITOR_TIME):
                 ADC_Value = ADC.ADS1256_GetAll()
                 deltaTime = update_Delta_Time(startTime)
                 df = update_Dataframe(deltaTime, ADC_Value, df)
@@ -303,11 +291,13 @@ def main():
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
             print('Water Loss (g): {0:.2f}'.format(INITIAL_MASS - FINAL_MASS))
-            print('Steam Accumulation - Steam Sensor Average Humidity: {0:.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
-            steam_Fixture_Graphs(df,TIME_INTERVAL)
+            print('Steam Accumulation - Steam Sensor Average Humidity: {0:,.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
+            steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
             plt.savefig('Steam_Fixture_Graphs.png')
-            dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum)
             plt.show()
+            dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION)
+            EMAIL_RECEIVE = input('Email:')
+            email_Send(excel_FileName(counter, SENSOR_HEIGHT), EMAIL_RECEIVE)
             counter = counter + 1
         except :
             GPIO.cleanup()
