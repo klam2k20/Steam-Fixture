@@ -5,7 +5,6 @@ import time
 import glob
 import smtplib
 import ADS1256
-import Adafruit_DHT
 import RPi.GPIO as GPIO
 import csv
 import numpy as np
@@ -19,23 +18,17 @@ from email import encoders
 STEAM_SENSOR1 = 6
 STEAM_SENSOR2 = 5
 STEAM_SENSOR3 = 4
-TEMP_PROBE_STEAM = '28-03049779ac6a'
-TEMP_PROBE_SURR = '28-03049779d2c1'
-HUMIDITY = Adafruit_DHT.DHT11
-HUMIDITY_SENSOR = 16
- 
-DATE = time.ctime().split(' ')
-PREVIOUS_SURR_HUM = 0
+TEMP_PROBE_STEAM = ''
+TEMP_PROBE_SURR = ''
 
 #-------------------------------------------------------------- SENSOR READING FUNCTIONS -------------------------------------------------------------------
-def read_humidity(DHT_object, DHT_pin):
-    global PREVIOUS_SURR_HUM
-    surr_humidity, surr_temp = Adafruit_DHT.read(DHT_object, DHT_pin)
-    if surr_humidity is not None:
-        PREVIOUS_SURR_HUM = surr_humidity
-        return surr_humidity
-    else:
-        return PREVIOUS_SURR_HUM
+def update_temp_id():
+    global TEMP_PROBE_STEAM, TEMP_PROBE_SURR
+    mypath = '/sys/bus/w1/devices/'
+    onlylinks = [f for f in os.listdir(mypath) if os.path.islink(os.path.join(mypath, f))]
+    onlylinks.remove('w1_bus_master1')
+    TEMP_PROBE_SURR = str(onlylinks[0])
+    TEMP_PROBE_STEAM = str(onlylinks[1])
 
 def read_temp_raw(id):
     base_dir = '/sys/bus/w1/devices/'
@@ -54,6 +47,7 @@ def read_temp(id):
         temp_string = lines[1][equals_pos+2:]
         temp_c = float(temp_string) / 1000.0
         return temp_c
+
 
 #-------------------------------------------------------------------- EMAIL FUNCTIONS ----------------------------------------------------------------------
 def email_Send(fileName, EMAIL_RECEIVE):
@@ -89,7 +83,7 @@ def email_Send(fileName, EMAIL_RECEIVE):
 
 #--------------------------------------------------------------------- DIRECTORY FUNCTION -----------------------------------------------------------------------
 def new_Dir(counter):
-    global DATE
+    DATE = time.ctime().split(' ')
     path1 = os.getcwd() + '/' + 'RAW DATA'
     file_path = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
     if not os.path.exists(path1):
@@ -104,7 +98,7 @@ def excel_FileName(counter, SENSOR_HEIGHT):
     return 'Steam_Fixture_' + str(counter) + '.xlsx'
 
 def dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION):
-    input_df = input_to_df(FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum, STEAM_APPLIANCE, FUNCTION)
+    input_df = input_to_df(df,FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum, STEAM_APPLIANCE, FUNCTION)
     writer = pd.ExcelWriter(excel_FileName(counter, SENSOR_HEIGHT), engine='xlsxwriter')
     df.to_excel(writer, sheet_name= 'Raw_Steam_Fixture_Data')
     input_df.to_excel(writer, sheet_name= 'Procedure_Results_Data')
@@ -124,31 +118,28 @@ def to_Humidity(raw):
 def format_best_fit_eq(m,b):
     return 'y = ' + '{0:.2f}'.format(m) + 'x +' + '{0:.2f}'.format(b)
 
-def input_to_df(FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum, STEAM_APPLIANCE, FUNCTION):
+def input_to_df(df, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum, STEAM_APPLIANCE, FUNCTION):
     input_dict = {'Steam Appliance':['Function', 'Food Load', 'Cook Time (min)', 'Time Interval (min)', 'Sensor Height (in)', 'Initial Mass (g)', 'Final Mass (g)', 'Water Loss (g)',
-                               'Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)'],
+                               'Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)', 'Average Steam Temperature (C)'],
                     STEAM_APPLIANCE: [FUNCTION, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, INITIAL_MASS - FINAL_MASS,
-                                         average_Sensor_Humidity, steam_Accum] }
+                                         average_Sensor_Humidity, steam_Accum, average_steam_temperature(df)] }
     input_df = pd.DataFrame(input_dict)
     return input_df
 
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def dataframe_Structure():
     columns = {'Time (min)':[], 'Steam Sensor 1 (Count)':[], 'Humidity 1 (%)':[],'Steam Sensor 2 (Count)':[], 'Humidity 2 (%)':[], 
-            'Steam Sensor 3 (Count)':[], 'Humidity 3 (%)':[], 'Steam Temp. (C)':[], 'Surrounding Humidity (%)':[], 
-            'Surrounding Temp. (C)':[]}
+            'Steam Sensor 3 (Count)':[], 'Humidity 3 (%)':[], 'Steam Temp. (C)':[], 'Surrounding Temp. (C)':[]}
     df = pd.DataFrame(columns)
     return df
 
 def update_Dataframe(deltaTime, ADC_Value, df):
-    global TEMP_PROBE_STEAM, TEMP_PROBE_SURR, STEAM_SENSOR1, STEAM_SENSOR2, STEAM_SENSOR3, HUMIDITY_SENSOR, HUMIDITY
-    surr_humidity = read_humidity(HUMIDITY, HUMIDITY_SENSOR)
+    global TEMP_PROBE_STEAM, TEMP_PROBE_SURR, STEAM_SENSOR1, STEAM_SENSOR2, STEAM_SENSOR3
     new_row = {'Time (min)':deltaTime, 
                 'Steam Sensor 1 (Count)':ADC_Value[STEAM_SENSOR1], 'Humidity 1 (%)':to_Humidity(ADC_Value[STEAM_SENSOR1]),
                 'Steam Sensor 2 (Count)':ADC_Value[STEAM_SENSOR2], 'Humidity 2 (%)':to_Humidity(ADC_Value[STEAM_SENSOR2]), 
                 'Steam Sensor 3 (Count)':ADC_Value[STEAM_SENSOR3], 'Humidity 3 (%)':to_Humidity(ADC_Value[STEAM_SENSOR3]), 
-                'Steam Temp. (C)':read_temp(TEMP_PROBE_STEAM), 'Surrounding Humidity (%)':surr_humidity, 
-                'Surrounding Temp. (C)':read_temp(TEMP_PROBE_SURR)}
+                'Steam Temp. (C)':read_temp(TEMP_PROBE_STEAM), 'Surrounding Temp. (C)':read_temp(TEMP_PROBE_SURR)}
     df = df.append(new_row, ignore_index = True)
     return df
                     
@@ -176,10 +167,9 @@ def humidity_Graph(df):
     plt.plot('Time (min)', 'Humidity 1 (%)', data = df, color = 'red')
     plt.plot('Time (min)', 'Humidity 2 (%)', data = df, color = 'black')
     plt.plot('Time (min)', 'Humidity 3 (%)', data = df, color = 'blue')
-    plt.plot('Time (min)', 'Surrounding Humidity (%)', data = df, color = 'orange')
     plt.xlabel('Time (min)')
     plt.ylabel('Humidity (%)')
-    plt.title('Time vs. Steam Sensor\'s Humidity vs Surrounding Humidity')
+    plt.title('Time vs. Steam Sensor\'s Humidity')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
 def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
@@ -238,7 +228,7 @@ def check_float(num):
 
 def check_string_input(phrase):
     while 1:
-        string = input(phrase)
+        string = input(phrase).strip()
         if not check_float(string):
             return string
         else:
@@ -246,7 +236,7 @@ def check_string_input(phrase):
 
 def check_float_input(phrase):
     while 1:
-        num = input(phrase)
+        num = input(phrase).strip()
         if check_float(num) and check_non_negative(float(num)):
             return float(num)
         elif check_float(num) and not check_non_negative(float(num)):
@@ -256,7 +246,7 @@ def check_float_input(phrase):
 
 def check_time_interval_input(phrase, end):
     while 1:
-        num = input(phrase)
+        num = input(phrase).strip()
         if check_float(num) and check_non_negative(float(num)) and float(num) <= end:
             return float(num)
         else:
@@ -266,15 +256,17 @@ def check_time_interval_input(phrase, end):
 def main():
     counter = 0
     new_Dir(counter)
+    update_temp_id()
+    EMAIL_RECEIVE = input('Email:').strip()
     while 1:
-        STEAM_APPLIANCE = input('Steam Appliance: ')
-        FUNCTION = input('Function: ')
+        STEAM_APPLIANCE = input('Steam Appliance: ').strip()
+        FUNCTION = input('Function: ').strip()
         FOOD_LOAD = check_string_input('Food Load: ')
         MONITOR_TIME = check_float_input('Monitor Time (min): ')
         TIME_INTERVAL = check_time_interval_input('Time Interval (min): ', MONITOR_TIME)
         SENSOR_HEIGHT = check_float_input('Sensor Height (in): ')
         INITIAL_MASS = check_float_input('Initial Mass (g): ')
-
+    
         try:
             df = dataframe_Structure()
             startTime = time.time()
@@ -286,7 +278,6 @@ def main():
                 deltaTime = update_Delta_Time(startTime)
                 df = update_Dataframe(deltaTime, ADC_Value, df)
                 time.sleep(2)
-
             FINAL_MASS = check_float_input('Final Mass (g): ')
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
@@ -294,10 +285,9 @@ def main():
             print('Steam Accumulation - Steam Sensor Average Humidity: {0:,.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
             steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
             plt.savefig('Steam_Fixture_Graphs.png')
-            plt.show()
             dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION)
-            EMAIL_RECEIVE = input('Email:')
             email_Send(excel_FileName(counter, SENSOR_HEIGHT), EMAIL_RECEIVE)
+            plt.show()
             counter = counter + 1
         except :
             GPIO.cleanup()
