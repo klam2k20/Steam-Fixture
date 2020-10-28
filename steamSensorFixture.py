@@ -82,10 +82,12 @@ def email_Send(fileName, EMAIL_RECEIVE):
     print("Email sent")
 
 #--------------------------------------------------------------------- DIRECTORY FUNCTION -----------------------------------------------------------------------
-def new_Dir(counter):
+def new_Dir():
     DATE = time.ctime().split(' ')
     path1 = os.getcwd() + '/' + 'RAW DATA'
     path2 = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
+    onlylinks = [f for f in os.listdir(path2) if os.path.isdir(os.path.join(path2, f))]
+    counter = len(onlylinks)
     file_path = path2 + "/" + str(counter)
     
     if not os.path.exists(path1):
@@ -93,8 +95,10 @@ def new_Dir(counter):
         os.mkdir(path2)
     elif not os.path.exists(path2):
         os.mkdir(path2)
+
     os.mkdir(file_path)
     os.chdir(file_path)
+    return counter
         
 #--------------------------------------------------------------------- EXCEL FUNCTION -----------------------------------------------------------------------
 def excel_FileName(counter, SENSOR_HEIGHT):
@@ -267,46 +271,44 @@ def check_float_input(phrase):
 
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
-    counter = 0
-    new_Dir(counter)
+    counter = new_Dir()
     update_temp_id()
     TIME_INTERVAL = .5
     STEAM_APPLIANCE = input('Steam Appliance: ').strip()
     #EMAIL_RECEIVE = input('Email:').strip()
-    while 1:
-        FUNCTION = input('Function: ').strip()
-        FOOD_LOAD = check_string_input('Food Load: ')
-        MONITOR_TIME = check_float_input('Monitor Time (min): ')
-        SENSOR_HEIGHT = check_float_input('Sensor Height (in): ')
-        INITIAL_MASS = check_float_input('Initial Mass (g): ')
     
-        try:
-            df = dataframe_Structure()
-            startTime = time.time()
-            deltaTime = 0
-            ADC = ADS1256.ADS1256()
-            ADC.ADS1256_init()
-            while (deltaTime < MONITOR_TIME):
-                ADC_Value = ADC.ADS1256_GetAll()
-                deltaTime = update_Delta_Time(startTime)
-                df = update_Dataframe(deltaTime, ADC_Value, df)
-                time.sleep(2)
-            FINAL_MASS = check_float_input('Final Mass (g): ')
-            average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
-            steam_Accum = steam_Accumulation(df)
-            derative_time = steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
-            print('Water Loss (g): {0:.2f}'.format(INITIAL_MASS - FINAL_MASS))
-            print('Steam Accumulation - Steam Sensor Average Humidity: {0:,.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
-            print_top10_derative(derative_time)
-            plt.savefig('Steam_Fixture_Graphs.png')
-            dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION)
-            #email_Send(excel_FileName(counter, SENSOR_HEIGHT), EMAIL_RECEIVE)
-            plt.show()
-            counter = counter + 1
-        except :
-            GPIO.cleanup()
-            print ("\r\nProgram end     ")
-            exit()
+    FUNCTION = input('Function: ').strip()
+    FOOD_LOAD = check_string_input('Food Load: ')
+    MONITOR_TIME = check_float_input('Monitor Time (min): ')
+    SENSOR_HEIGHT = check_float_input('Sensor Height (in): ')
+    INITIAL_MASS = check_float_input('Initial Mass (g): ')
+    
+    try:
+        df = dataframe_Structure()
+        startTime = time.time()
+        deltaTime = 0
+        ADC = ADS1256.ADS1256()
+        ADC.ADS1256_init()
+        while (deltaTime < MONITOR_TIME):
+            ADC_Value = ADC.ADS1256_GetAll()
+            deltaTime = update_Delta_Time(startTime)
+            df = update_Dataframe(deltaTime, ADC_Value, df)
+            time.sleep(2)
+        FINAL_MASS = check_float_input('Final Mass (g): ')
+        average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
+        steam_Accum = steam_Accumulation(df)
+        derative_time = steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
+        print('Water Loss (g): {0:.2f}'.format(INITIAL_MASS - FINAL_MASS))
+        print('Steam Accumulation - Steam Sensor Average Humidity: {0:,.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
+        print_top10_derative(derative_time)
+        plt.savefig('Steam_Fixture_Graphs.png')
+        dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION)
+        #email_Send(excel_FileName(counter, SENSOR_HEIGHT), EMAIL_RECEIVE)
+        plt.show()
+    except :
+        GPIO.cleanup()
+        print ("\r\nProgram end     ")
+        exit()
 
 if __name__ == "__main__":
     main()
