@@ -126,6 +126,16 @@ def input_to_df(df, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITI
     input_df = pd.DataFrame(input_dict)
     return input_df
 
+def print_top10_derative(d):
+    sorted_derative = sorted(d, reverse=True)
+    if len(sorted_derative) < 10:
+        for derative in sorted_derative:
+            print('Slope: {0:.2f} @ {1:.2f} min'.format(derative, d[derative]))
+    else:
+        for derative in sorted_derative[:10]:
+            print('Slope: {0:.2f} @ {1:.2f} min'.format(derative, d[derative]))
+
+
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def dataframe_Structure():
     columns = {'Time (min)':[], 'Steam Sensor 1 (Count)':[], 'Humidity 1 (%)':[],'Steam Sensor 2 (Count)':[], 'Humidity 2 (%)':[], 
@@ -177,6 +187,7 @@ def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
     end_Interval = start_Interval + time_interval
     legend = []
     label = []
+    derative_time = dict()
     while start_Interval < MONITOR_TIME:
         df2 = df.loc[(df['Time (min)'] >= start_Interval) & (df['Time (min)'] <= end_Interval)]
         x = df2['Time (min)']
@@ -186,6 +197,7 @@ def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
         best_fit, = plt.plot(x, m*x+b)
         legend.append(best_fit,)
         label.append(format_best_fit_eq(m,b))
+        derative_time[m] = start_Interval
         start_Interval = end_Interval
         end_Interval = start_Interval + time_interval
     plt.plot('Time (min)', 'Steam Accumulation (Count * min)', 'o', data = df, color = 'red')
@@ -193,6 +205,7 @@ def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
     plt.ylabel('Steam Accum. (Count * min)')
     plt.title('Time vs. Steam Accumulation')
     plt.legend(legend, label,loc='center left', bbox_to_anchor=(1, 0.5))
+    return derative_time
 
 def temperature_Graph(df):
     plt.plot('Time (min)', 'Steam Temp. (C)', data = df, color = 'red')
@@ -205,7 +218,7 @@ def temperature_Graph(df):
 def steam_Fixture_Graphs(df,time_interval, MONITOR_TIME):
     plt.figure(num=None, figsize=(10, 10), dpi=80, facecolor='w', edgecolor='k')
     plt.subplot(311)
-    steam_Accumulation_Graph(df,time_interval,MONITOR_TIME)
+    derative_time = steam_Accumulation_Graph(df,time_interval,MONITOR_TIME)
 
     plt.subplot(312)
     humidity_Graph(df)
@@ -214,6 +227,7 @@ def steam_Fixture_Graphs(df,time_interval, MONITOR_TIME):
     temperature_Graph(df)
 
     plt.tight_layout()
+    return derative_time
     
 #----------------------------------------------------------------- CHECK INPUT FUNCTIONS -------------------------------------------------------------------
 def check_non_negative(num):
@@ -244,26 +258,18 @@ def check_float_input(phrase):
         else:
             print('Input must be a float or integer.')
 
-def check_time_interval_input(phrase, end):
-    while 1:
-        num = input(phrase).strip()
-        if check_float(num) and check_non_negative(float(num)) and float(num) <= end:
-            return float(num)
-        else:
-            print('Input must be a positive float or integer less than or equal to the cook duration.')
-
 #----------------------------------------------------------------- MAIN FUNCTION -------------------------------------------------------------------
 def main():
     counter = 0
     new_Dir(counter)
     update_temp_id()
-    EMAIL_RECEIVE = input('Email:').strip()
+    TIME_INTERVAL = .5
+    #EMAIL_RECEIVE = input('Email:').strip()
     while 1:
         STEAM_APPLIANCE = input('Steam Appliance: ').strip()
         FUNCTION = input('Function: ').strip()
         FOOD_LOAD = check_string_input('Food Load: ')
         MONITOR_TIME = check_float_input('Monitor Time (min): ')
-        TIME_INTERVAL = check_time_interval_input('Time Interval (min): ', MONITOR_TIME)
         SENSOR_HEIGHT = check_float_input('Sensor Height (in): ')
         INITIAL_MASS = check_float_input('Initial Mass (g): ')
     
@@ -281,12 +287,13 @@ def main():
             FINAL_MASS = check_float_input('Final Mass (g): ')
             average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
             steam_Accum = steam_Accumulation(df)
+            derative_time = steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
             print('Water Loss (g): {0:.2f}'.format(INITIAL_MASS - FINAL_MASS))
             print('Steam Accumulation - Steam Sensor Average Humidity: {0:,.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
-            steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
+            print_top10_derative(derative_time)
             plt.savefig('Steam_Fixture_Graphs.png')
             dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION)
-            email_Send(excel_FileName(counter, SENSOR_HEIGHT), EMAIL_RECEIVE)
+            #email_Send(excel_FileName(counter, SENSOR_HEIGHT), EMAIL_RECEIVE)
             plt.show()
             counter = counter + 1
         except :
