@@ -85,12 +85,15 @@ def email_Send(fileName, EMAIL_RECEIVE):
 def new_Dir(counter):
     DATE = time.ctime().split(' ')
     path1 = os.getcwd() + '/' + 'RAW DATA'
-    file_path = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
+    path2 = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
+    file_path = path2 + "/" + str(counter)
+    
     if not os.path.exists(path1):
         os.mkdir(path1)
-        os.mkdir(file_path)
-    elif not os.path.exists(file_path):
-        os.mkdir(file_path)
+        os.mkdir(path2)
+    elif not os.path.exists(path2):
+        os.mkdir(path2)
+    os.mkdir(file_path)
     os.chdir(file_path)
         
 #--------------------------------------------------------------------- EXCEL FUNCTION -----------------------------------------------------------------------
@@ -128,14 +131,18 @@ def input_to_df(df, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITI
 
 def print_top10_derative(d):
     sorted_derative = sorted(d, reverse=True)
-    if len(sorted_derative) < 10:
+    dict_len = len(sorted_derative)
+    counter = 1
+    if  dict_len < 10:
+        print('\n Top ' + str(dict_len) + ' steam slope spikes: ')
         for derative in sorted_derative:
-            print('Slope: {0:.2f} @ {1:.2f} min'.format(derative, d[derative]))
+            print('\n {0}. {1:.2f} (Count * min) @ {2:.2f} min'.format(counter, derative, d[derative]))
+            counter += 1
     else:
+        print('\n Top 10 steam slope spikes: ')
         for derative in sorted_derative[:10]:
-            print('Slope: {0:.2f} @ {1:.2f} min'.format(derative, d[derative]))
-
-
+            print('\n {0}. {1:.2f} @ {2:.2f} min'.format(counter, derative, d[derative]))
+            counter += 1
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def dataframe_Structure():
     columns = {'Time (min)':[], 'Steam Sensor 1 (Count)':[], 'Humidity 1 (%)':[],'Steam Sensor 2 (Count)':[], 'Humidity 2 (%)':[], 
@@ -204,7 +211,7 @@ def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
     plt.xlabel('Time (min)')
     plt.ylabel('Steam Accum. (Count * min)')
     plt.title('Time vs. Steam Accumulation')
-    plt.legend(legend, label,loc='center left', bbox_to_anchor=(1, 0.5))
+    #plt.legend(legend, label,loc='center left', bbox_to_anchor=(1, 0.5))
     return derative_time
 
 def temperature_Graph(df):
@@ -264,9 +271,9 @@ def main():
     new_Dir(counter)
     update_temp_id()
     TIME_INTERVAL = .5
+    STEAM_APPLIANCE = input('Steam Appliance: ').strip()
     #EMAIL_RECEIVE = input('Email:').strip()
     while 1:
-        STEAM_APPLIANCE = input('Steam Appliance: ').strip()
         FUNCTION = input('Function: ').strip()
         FOOD_LOAD = check_string_input('Food Load: ')
         MONITOR_TIME = check_float_input('Monitor Time (min): ')
