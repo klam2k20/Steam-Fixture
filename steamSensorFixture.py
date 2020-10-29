@@ -25,11 +25,14 @@ START_TIME = 0
 #-------------------------------------------------------------- SENSOR READING FUNCTIONS -------------------------------------------------------------------
 def update_temp_id():
     global TEMP_PROBE_STEAM, TEMP_PROBE_SURR
-    mypath = '/sys/bus/w1/devices/'
-    onlylinks = [f for f in os.listdir(mypath) if os.path.islink(os.path.join(mypath, f))]
-    onlylinks.remove('w1_bus_master1')
-    TEMP_PROBE_SURR = str(onlylinks[0])
-    TEMP_PROBE_STEAM = str(onlylinks[1])
+    try:
+        mypath = '/sys/bus/w1/devices/'
+        onlylinks = [f for f in os.listdir(mypath) if os.path.islink(os.path.join(mypath, f))]
+        onlylinks.remove('w1_bus_master1')
+        TEMP_PROBE_SURR = str(onlylinks[0])
+        TEMP_PROBE_STEAM = str(onlylinks[1])
+    except IndexError:
+        print('Temperature probes are not correctly connected')
 
 def read_temp_raw(id):
     base_dir = '/sys/bus/w1/devices/'
@@ -87,16 +90,16 @@ def new_Dir():
     DATE = time.ctime().split(' ')
     path1 = os.getcwd() + '/' + 'RAW DATA'
     path2 = path1 + "/" + DATE[1] + DATE[2] + DATE[4]
-    onlylinks = [f for f in os.listdir(path2) if os.path.isdir(os.path.join(path2, f))]
-    counter = len(onlylinks)
-    file_path = path2 + "/" + str(counter)
     
     if not os.path.exists(path1):
         os.mkdir(path1)
         os.mkdir(path2)
     elif not os.path.exists(path2):
         os.mkdir(path2)
-
+    
+    onlylinks = [f for f in os.listdir(path2) if os.path.isdir(os.path.join(path2, f))]
+    counter = len(onlylinks)
+    file_path = path2 + "/" + str(counter)
     os.mkdir(file_path)
     os.chdir(file_path)
     return counter
@@ -323,5 +326,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
