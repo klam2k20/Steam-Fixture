@@ -166,7 +166,7 @@ def update_Dataframe(deltaTime, ADC_Value, df):
     humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
     humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
     humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
-    if ((humidity_Steam_Sensor_1 >= 10) | (humidity_Steam_Sensor_2 >= 10) | (humidity_Steam_Sensor_3 >= 10)) & (START_TIME == 0):
+    if ((humidity_Steam_Sensor_1 >= 40) | (humidity_Steam_Sensor_2 >= 40) | (humidity_Steam_Sensor_3 >= 40)) & (START_TIME == 0):
         START_TIME = deltaTime
     if START_TIME != 0:
         new_row = {'Time (min)':deltaTime, 
