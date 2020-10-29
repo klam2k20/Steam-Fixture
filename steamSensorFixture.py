@@ -305,7 +305,6 @@ def main():
             deltaTime = update_Delta_Time(startTime)
             df = update_Dataframe(deltaTime, ADC_Value, df)
             time.sleep(2)
-        print(df)
         FINAL_MASS = check_float_input('Final Mass (g): ')
         average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
         steam_Accum = steam_Accumulation(df)
