@@ -1,12 +1,14 @@
 import matplotlib.pyplot as plt
 import xlsxwriter
 import os
+import sys
 import time
 import glob
 import smtplib
 import ADS1256
 import RPi.GPIO as GPIO
 import csv
+import math
 import numpy as np
 import pandas as pd
 from email.mime.text import MIMEText
@@ -21,6 +23,7 @@ STEAM_SENSOR3 = 4
 TEMP_PROBE_STEAM = ''
 TEMP_PROBE_SURR = ''
 START_TIME = 0
+THRESHOLD = 10
 
 #-------------------------------------------------------------- SENSOR READING FUNCTIONS -------------------------------------------------------------------
 def update_temp_id():
@@ -108,11 +111,12 @@ def new_Dir():
 def excel_FileName(counter, SENSOR_HEIGHT):
     return 'Steam_Fixture_' + str(counter) + '.xlsx'
 
-def dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION):
+def dataframe_to_Excel(counter, df, derivative_df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION):
     input_df = input_to_df(df,FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, average_Sensor_Humidity, steam_Accum, STEAM_APPLIANCE, FUNCTION)
     writer = pd.ExcelWriter(excel_FileName(counter, SENSOR_HEIGHT), engine='xlsxwriter')
     df.to_excel(writer, sheet_name= 'Raw_Steam_Fixture_Data')
     input_df.to_excel(writer, sheet_name= 'Procedure_Results_Data')
+    derivative_df.to_excel(writer, sheet_name= 'Top Derivative - Time')
     workbook = writer.book
     worksheet = workbook.add_worksheet('Graphs')
     worksheet.insert_image(0,0,'Steam_Fixture_Graphs.png')
@@ -137,20 +141,29 @@ def input_to_df(df, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITI
     input_df = pd.DataFrame(input_dict)
     return input_df
 
-def print_top10_derative(d):
-    sorted_derative = sorted(d, reverse=True)
-    dict_len = len(sorted_derative)
+def print_top10_derivative(d):
+    sorted_derivative = sorted(d, reverse=True)
+    dict_len = len(sorted_derivative)
+    derivative_df_structure = {'Derivative (Count * min)':[], 'Time (min)':[]}
+    derivative_df = pd.DataFrame(derivative_df_structure)
     counter = 1
     if  dict_len < 10:
         print('\n Top ' + str(dict_len) + ' steam slope spikes: ')
-        for derative in sorted_derative:
-            print('\n {0}. {1:.2f} (Count * min) @ {2:.2f} min'.format(counter, derative, d[derative]))
-            counter += 1
+        for derivative in sorted_derivative:
+            if not math.isnan(derivative):
+                derivative_df_new_row = {'Derivative (Count * min)':derivative, 'Time (min)':d[derivative]}
+                derivative_df = derivative_df.append(derivative_df_new_row, ignore_index = True)
+                print('\n {0}. {1:.2f} (Count * min) @ {2:.2f} min'.format(counter, derivative, d[derivative]))
+                counter += 1
     else:
         print('\n Top 10 steam slope spikes: ')
-        for derative in sorted_derative[:10]:
-            print('\n {0}. {1:.2f} @ {2:.2f} min'.format(counter, derative, d[derative]))
-            counter += 1
+        for derivative in sorted_derivative[:10]:
+            if not math.isnan(derivative):
+                derivative_df_new_row = {'Derivative (Count * min)':derivative, 'Time (min)':d[derivative]}
+                derivative_df = derivative_df.append(derivative_df_new_row, ignore_index = True)
+                print('\n {0}. {1:.2f} @ {2:.2f} min'.format(counter, derivative, d[derivative]))
+                counter += 1
+    return derivative_df
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def dataframe_Structure():
     columns = {'Time (min)':[], 'Steam Sensor 1 (Count)':[], 'Humidity 1 (%)':[],'Steam Sensor 2 (Count)':[], 'Humidity 2 (%)':[], 
@@ -166,7 +179,7 @@ def update_Dataframe(deltaTime, ADC_Value, df):
     humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
     humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
     humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
-    if ((humidity_Steam_Sensor_1 >= 40) | (humidity_Steam_Sensor_2 >= 40) | (humidity_Steam_Sensor_3 >= 40)) & (START_TIME == 0):
+    if ((humidity_Steam_Sensor_1 >= THRESHOLD) | (humidity_Steam_Sensor_2 >= THRESHOLD) | (humidity_Steam_Sensor_3 >= THRESHOLD)) & (START_TIME == 0):
         START_TIME = deltaTime
     if START_TIME != 0:
         new_row = {'Time (min)':deltaTime, 
@@ -197,6 +210,11 @@ def steam_Accumulation(df):
     df['Steam Accumulation (Count * min)'] = (df['Steam Sensor 1 (Count)'] * df['Delta T (min)']) + (df['Steam Sensor 2 (Count)'] * df['Delta T (min)']) + (df['Steam Sensor 3 (Count)'] * df['Delta T (min)'])
     return df['Steam Accumulation (Count * min)'].sum()
 
+def dataframe_Empty_Check(df):
+    if df.empty:
+        print('Dataframe empty. Steam sensor threshold maybe too high or steam sensors maybe broken')
+        sys.exit()
+
 #----------------------------------------------------------------- GRAPH FUNCTION -------------------------------------------------------------------
 def humidity_Graph(df):
     plt.plot('Time (min)', 'Humidity 1 (%)', data = df, color = 'red')
@@ -212,7 +230,7 @@ def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
     end_Interval = start_Interval + time_interval
     legend = []
     label = []
-    derative_time = dict()
+    derivative_time = dict()
     while start_Interval < MONITOR_TIME:
         df2 = df.loc[(df['Time (min)'] >= start_Interval) & (df['Time (min)'] <= end_Interval)]
         x = df2['Time (min)']
@@ -222,7 +240,7 @@ def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
         best_fit, = plt.plot(x, m*x+b)
         legend.append(best_fit,)
         label.append(format_best_fit_eq(m,b))
-        derative_time[m] = start_Interval
+        derivative_time[m] = start_Interval
         start_Interval = end_Interval
         end_Interval = start_Interval + time_interval
     plt.plot('Time (min)', 'Steam Accumulation (Count * min)', 'o', data = df, color = 'red')
@@ -230,7 +248,7 @@ def steam_Accumulation_Graph(df, time_interval, MONITOR_TIME):
     plt.ylabel('Steam Accum. (Count * min)')
     plt.title('Time vs. Steam Accumulation')
     #plt.legend(legend, label,loc='center left', bbox_to_anchor=(1, 0.5))
-    return derative_time
+    return derivative_time
 
 def temperature_Graph(df):
     plt.plot('Time (min)', 'Steam Temp. (C)', data = df, color = 'red')
@@ -243,7 +261,7 @@ def temperature_Graph(df):
 def steam_Fixture_Graphs(df,time_interval, MONITOR_TIME):
     plt.figure(num=None, figsize=(10, 10), dpi=80, facecolor='w', edgecolor='k')
     plt.subplot(311)
-    derative_time = steam_Accumulation_Graph(df,time_interval,MONITOR_TIME)
+    derivative_time = steam_Accumulation_Graph(df,time_interval,MONITOR_TIME)
 
     plt.subplot(312)
     humidity_Graph(df)
@@ -252,7 +270,7 @@ def steam_Fixture_Graphs(df,time_interval, MONITOR_TIME):
     temperature_Graph(df)
 
     plt.tight_layout()
-    return derative_time
+    return derivative_time
     
 #----------------------------------------------------------------- CHECK INPUT FUNCTIONS -------------------------------------------------------------------
 def check_non_negative(num):
@@ -308,15 +326,18 @@ def main():
             deltaTime = update_Delta_Time(startTime)
             df = update_Dataframe(deltaTime, ADC_Value, df)
             time.sleep(2)
+        print(1)
+        dataframe_Empty_Check(df)
+        print(2)
         FINAL_MASS = check_float_input('Final Mass (g): ')
         average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
         steam_Accum = steam_Accumulation(df)
-        derative_time = steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
+        derivative_time = steam_Fixture_Graphs(df,TIME_INTERVAL, MONITOR_TIME)
         print('Water Loss (g): {0:.2f}'.format(INITIAL_MASS - FINAL_MASS))
         print('Steam Accumulation - Steam Sensor Average Humidity: {0:,.2f} - {1:.2f} %'.format(steam_Accum, average_Sensor_Humidity))
-        print_top10_derative(derative_time)
+        derivative_df = print_top10_derivative(derivative_time)
         plt.savefig('Steam_Fixture_Graphs.png')
-        dataframe_to_Excel(counter, df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION)
+        dataframe_to_Excel(counter, df, derivative_df, average_Sensor_Humidity, steam_Accum, FOOD_LOAD, MONITOR_TIME, TIME_INTERVAL, SENSOR_HEIGHT, INITIAL_MASS, FINAL_MASS, STEAM_APPLIANCE, FUNCTION)
         #email_Send(excel_FileName(counter, SENSOR_HEIGHT), EMAIL_RECEIVE)
         plt.show()
     except :
