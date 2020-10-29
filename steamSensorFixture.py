@@ -20,6 +20,7 @@ STEAM_SENSOR2 = 5
 STEAM_SENSOR3 = 4
 TEMP_PROBE_STEAM = ''
 TEMP_PROBE_SURR = ''
+START_TIME = 0
 
 #-------------------------------------------------------------- SENSOR READING FUNCTIONS -------------------------------------------------------------------
 def update_temp_id():
@@ -155,13 +156,23 @@ def dataframe_Structure():
     return df
 
 def update_Dataframe(deltaTime, ADC_Value, df):
-    global TEMP_PROBE_STEAM, TEMP_PROBE_SURR, STEAM_SENSOR1, STEAM_SENSOR2, STEAM_SENSOR3
-    new_row = {'Time (min)':deltaTime, 
-                'Steam Sensor 1 (Count)':ADC_Value[STEAM_SENSOR1], 'Humidity 1 (%)':to_Humidity(ADC_Value[STEAM_SENSOR1]),
-                'Steam Sensor 2 (Count)':ADC_Value[STEAM_SENSOR2], 'Humidity 2 (%)':to_Humidity(ADC_Value[STEAM_SENSOR2]), 
-                'Steam Sensor 3 (Count)':ADC_Value[STEAM_SENSOR3], 'Humidity 3 (%)':to_Humidity(ADC_Value[STEAM_SENSOR3]), 
+    global TEMP_PROBE_STEAM, TEMP_PROBE_SURR, STEAM_SENSOR1, STEAM_SENSOR2, STEAM_SENSOR3, START_TIME
+    analog_Steam_Sensor_1 = ADC_Value[STEAM_SENSOR1]
+    analog_Steam_Sensor_2 = ADC_Value[STEAM_SENSOR2]
+    analog_Steam_Sensor_3 = ADC_Value[STEAM_SENSOR3]
+    humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
+    humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
+    humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
+    if ((humidity_Steam_Sensor_1 >= 10) | (humidity_Steam_Sensor_2 >= 10) | (humidity_Steam_Sensor_3 >= 10)) & (START_TIME == 0):
+        START_TIME = deltaTime
+    if START_TIME != 0:
+        new_row = {'Time (min)':deltaTime, 
+                'Steam Sensor 1 (Count)':analog_Steam_Sensor_1, 'Humidity 1 (%)':humidity_Steam_Sensor_1,
+                'Steam Sensor 2 (Count)':analog_Steam_Sensor_2, 'Humidity 2 (%)':humidity_Steam_Sensor_2, 
+                'Steam Sensor 3 (Count)':analog_Steam_Sensor_3, 'Humidity 3 (%)':humidity_Steam_Sensor_3, 
                 'Steam Temp. (C)':read_temp(TEMP_PROBE_STEAM), 'Surrounding Temp. (C)':read_temp(TEMP_PROBE_SURR)}
-    df = df.append(new_row, ignore_index = True)
+        df = df.append(new_row, ignore_index = True)
+        return df
     return df
                     
 def average_Steam_Sensor_Humidity(df):
@@ -294,6 +305,7 @@ def main():
             deltaTime = update_Delta_Time(startTime)
             df = update_Dataframe(deltaTime, ADC_Value, df)
             time.sleep(2)
+        print(df)
         FINAL_MASS = check_float_input('Final Mass (g): ')
         average_Sensor_Humidity = average_Steam_Sensor_Humidity(df)
         steam_Accum = steam_Accumulation(df)
