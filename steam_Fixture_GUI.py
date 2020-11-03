@@ -330,7 +330,7 @@ class Ui_MainWindow(object):
         self.final_mass = myLineEdit(self.verticalLayoutWidget)
         self.final_mass.setObjectName("final_mass")
         self.inputs.addWidget(self.final_mass)
-        self.final_mass.setReadOnly(True)
+        self.final_mass.setEnabled(False)
 
     def create_output_line_edits(self):
         self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.steam_Fixture_GUI)
@@ -343,14 +343,17 @@ class Ui_MainWindow(object):
         self.water_loss = myLineEdit(self.verticalLayoutWidget_2)
         self.water_loss.setObjectName("water_loss")
         self.outputs.addWidget(self.water_loss)
+        self.water_loss.setEnabled(False)
 
         self.steam_sensor_humidity = myLineEdit(self.verticalLayoutWidget_2)
         self.steam_sensor_humidity.setObjectName("steam_sensor_humidity")
         self.outputs.addWidget(self.steam_sensor_humidity)
+        self.steam_sensor_humidity.setEnabled(False)
 
         self.steam_accumulation = myLineEdit(self.verticalLayoutWidget_2)
         self.steam_accumulation.setObjectName("steam_accumulation")
         self.outputs.addWidget(self.steam_accumulation)
+        self.steam_accumulation.setEnabled(False)
 
     def create_slope_list(self):
         self.slope = QtWidgets.QListWidget(self.verticalLayoutWidget_2)
@@ -468,12 +471,12 @@ class Ui_MainWindow(object):
         global df, STEAM_APPLIANCE, FUNCTION, FOOD_LOAD, MONITOR_TIME, SENSOR_HEIGHT, INITIAL_MASS, COUNTER, TIME_INTERVAL 
         _translate = QtCore.QCoreApplication.translate
         self.start_button.setEnabled(False)
-        self.steam_appliance.setReadOnly(True)
-        self.function.setReadOnly(True)
-        self.food_load.setReadOnly(True)
-        self.monitor_time.setReadOnly(True)
-        self.sensor_height.setReadOnly(True)
-        self.initial_mass.setReadOnly(True)
+        self.steam_appliance.setEnabled(False)
+        self.function.setEnabled(False)
+        self.food_load.setEnabled(False)
+        self.monitor_time.setEnabled(False)
+        self.sensor_height.setEnabled(False)
+        self.initial_mass.setEnabled(False)
 
         COUNTER = new_Dir()
         update_temp_id()
@@ -507,7 +510,7 @@ class Ui_MainWindow(object):
             self.resume_button.clicked.connect(self.resume_function)
             self.resume_button.setEnabled(False)
             
-            self.final_mass.setReadOnly(False)
+            self.final_mass.setEnabled(True)
             self.final_mass.setValidator(self.double_validator)
             self.final_mass.textChanged.connect(self.final_mass.check_state)
             self.final_mass.textChanged.emit(self.final_mass.text())
