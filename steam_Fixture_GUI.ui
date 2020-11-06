@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>798</width>
+    <height>537</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Steam Fixture GUI</string>
+  </property>
+  <widget class="QWidget" name="steam_Fixture_GUI">
+   <widget class="QWidget" name="verticalLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>201</width>
+      <height>401</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="inputs">
+     <property name="spacing">
+      <number>-1</number>
+     </property>
+     <item>
+      <widget class="QLineEdit" name="function">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Steam Appliance:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="steam_appliance">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Function:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="food_load">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Food Load:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="monitor_time">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Monitor Time (min):</string>
+       </property>
+       <property name="clearButtonEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="sensor_height">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Sensor Height (in):</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="initial_mass">
+       <property name="inputMask">
+        <string/>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Initial Mass (g):</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="final_mass">
+       <property name="placeholderText">
+        <string>Final Mass (g): </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="start_button">
+       <property name="text">
+        <string>FINAL MASS</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="verticalLayoutWidget_2">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>20</y>
+      <width>241</width>
+      <height>401</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="outputs">
+     <property name="spacing">
+      <number>-1</number>
+     </property>
+     <item>
+      <widget class="QLineEdit" name="water_loss">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Steam Accumulation (Count * min): </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="steam_sensor_humidity">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Steam Sensors' Average Humidity (%): </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="steam_accumulation">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>Water Loss (g):</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QListWidget" name="listWidget">
+       <item>
+        <property name="text">
+         <string>Slope (Count) - Time (min):</string>
+        </property>
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1. </string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>2. </string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>3.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>4.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>5.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>6.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>7.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>8.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>9.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>10.</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QPushButton" name="start_button_2">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>460</y>
+      <width>231</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Quit</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>20</y>
+      <width>321</width>
+      <height>401</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>22</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Graphs</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignHCenter|Qt::AlignTop</set>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
