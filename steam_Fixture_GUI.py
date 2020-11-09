@@ -7,6 +7,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMessageBox, QApplication
 import constants
 import steamSensorFixture
+import  os
 
 #----------------------------------------------------------------- THREAD FUNCTION -------------------------------------------------------------------
 class Worker(QtCore.QRunnable):
@@ -112,6 +113,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.steam_Fixture_GUI)
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        constants.START_PATH = os.getcwd()
         
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -135,7 +137,7 @@ class Ui_MainWindow(object):
         self.water_loss_label.setText(_translate("MainWindow", "Water Loss"))
         self.sensor_humidity_label.setText(_translate("MainWindow", "Sensors\' Humidity"))
         self.steam_temp_label.setText(_translate("MainWindow", "Steam Temperature"))
-        self.graph_label.setText(_translate("MainWindow", "Graphs"))
+        self.graph_label.setText(_translate("MainWindow", ""))
         
 #----------------------------------------------------------------- TIMER FUNCTIONS -------------------------------------------------------------------
     def setup_timer_label(self):
@@ -148,7 +150,8 @@ class Ui_MainWindow(object):
         self.timer_label.setText('00:00:00') 
         self.timer_label.setAlignment(QtCore.Qt.AlignCenter)
         self.timer_label.setStatusTip('Timer')
-          
+        
+            
     def setup_timer(self):
         timer = QtCore.QTimer(self.steam_Fixture_GUI) 
         timer.timeout.connect(self.showTime) 
@@ -157,7 +160,8 @@ class Ui_MainWindow(object):
     def showTime(self):
         if self.flag: 
             self.count+= 1
-        constants.TIME = self.count
+            
+        constants.MONITOR_TIME = self.count
         h = math.floor(self.count / 3600)
         m = math.floor((self.count % 3600) / 60)
         s = self.count % 3600 % 60
@@ -177,19 +181,20 @@ class Ui_MainWindow(object):
         self.exit_button.setObjectName("exit_button")
         self.button_layout.addWidget(self.exit_button)
         self.exit_button.clicked.connect(self.quit_function)
-        self.exit_button.setStatusTip('Quit')
+        self.exit_button.setStatusTip('Exit')
         
         self.reset_button = QtWidgets.QPushButton(self.layoutWidget1)
         self.reset_button.setObjectName("reset_button")
         self.button_layout.addWidget(self.reset_button)
-        self.reset_button.clicked.connect(self.new_run)
-        self.reset_button.setStatusTip('Begin new run')
+        self.reset_button.clicked.connect(self.reset)
+        self.reset_button.setStatusTip('Reset')
 
         self.resume_button = QtWidgets.QPushButton(self.layoutWidget)
         self.resume_button.setObjectName("resume_button")
         self.input_layout.addWidget(self.resume_button, 9, 1, 1, 1)
         self.resume_button.clicked.connect(self.resume_function)
         self.resume_button.setEnabled(False)
+        self.resume_button.setStatusTip('Start recording sensors\' data first')
 
     def start_function(self):
         self.status_bar.setStatusTip('Recording sensors\' data')
@@ -255,6 +260,7 @@ class Ui_MainWindow(object):
         self.final_water_mass_line.setEnabled(False)
         self.resume_button.setEnabled(False)
         
+        steamSensorFixture.new_Dir()
         constants.FINAL_WATER_MASS = float(self.final_water_mass_line.text().strip())
         constants.FINAL_FOOD_MASS = float(self.final_food_mass_line.text().strip())
         constants.WATER_LOSS = (constants.INITIAL_FOOD_MASS + constants.INITIAL_WATER_MASS) - (constants.FINAL_FOOD_MASS + constants.FINAL_WATER_MASS)
@@ -278,6 +284,7 @@ class Ui_MainWindow(object):
         self.graph_label.setScaledContents(True)
         self.status_bar.setStatusTip('Done calculating results. Excel file has been exported')
         
+    
     def quit_function(self):
         self.status_bar.setStatusTip('Quitting')
         sys.exit()
@@ -394,7 +401,10 @@ class Ui_MainWindow(object):
             if q.validator().validate(q.text(), 0)[0] == QtGui.QValidator.Intermediate:
                 inputs_valid = False
         if inputs_valid:
-            self.start_button.setEnabled(True)
+            if steamSensorFixture.check_Sensors():
+                self.start_button.setEnabled(True)
+            else:
+                self.sensor_Wet_Popup()
         else:
             self.start_button.setEnabled(False)
     
@@ -422,6 +432,7 @@ class Ui_MainWindow(object):
         self.steam_temp_label.setObjectName("steam_temp_label")
         self.output_layout.addWidget(self.steam_temp_label, 2, 0, 1, 1)
         
+
 #----------------------------------------------------------------- OUTPUT FUNCTIONS -------------------------------------------------------------------
     def create_output_line_edits(self):
         self.steam_accumulation_line = myLineEdit(self.layoutWidget2)
@@ -505,12 +516,6 @@ class Ui_MainWindow(object):
         self.graph_label.setObjectName("graph_label")
         self.graph_label.setStyleSheet("border : 1px solid black;")
         self.graph_label.setStatusTip('Graphs')
-        font = QtGui.QFont()
-        font.setPointSize(22)
-        font.setBold(True)
-        font.setWeight(75)
-        self.graph_label.setFont(font)
-        self.graph_label.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
         
 
 #----------------------------------------------------------------- POPUP FUNCTIONS -------------------------------------------------------------------
@@ -526,11 +531,18 @@ class Ui_MainWindow(object):
         msg.setText("Enter Food and Water Final Masses (g)")
         msg.setIcon(QMessageBox.Information)
         msg.exec()
-
+    
+    def sensor_Wet_Popup(self):
+        self.status_bar.setStatusTip('Error!')
+        msg = QMessageBox()
+        msg.setText('Error! Steam sensors are not dry')
+        msg.setIcon(QMessageBox.Critical)
+        msg.exec()
+        
     def dataframe_Empty_Popup(self):
         self.status_bar.setStatusTip('Error!')
         msg = QMessageBox()
-        msg.setText("Error! Theshold maybe too high or steam sensors maybe wet.")
+        msg.setText("Error! Theshold maybe too high.")
         msg.setIcon(QMessageBox.Critical)            
         msg.exec()
         self.disable_all()
@@ -542,6 +554,7 @@ class Ui_MainWindow(object):
         msg.setIcon(QMessageBox.Critical)
         msg.exec()
         self.disable_all()
+        print(constants.df)
             
 #----------------------------------------------------------------- RESET FUNCTIONS -------------------------------------------------------------------
     def reset_Line_Edits(self):
@@ -560,6 +573,10 @@ class Ui_MainWindow(object):
         self.sensor_humidity_line.setText('')
         self.steam_temp_line.setText('')
         
+        color = '#fdfefe'
+        self.final_food_mass_line.setStyleSheet('QLineEdit { background-color: %s }' % color)
+        self.final_water_mass_line.setStyleSheet('QLineEdit { background-color: %s }' % color)
+        
         self.steam_appliance_line.setEnabled(True)
         self.function_line.setEnabled(True)
         self.food_load_line.setEnabled(True)
@@ -567,30 +584,40 @@ class Ui_MainWindow(object):
         self.sensor_height_line.setEnabled(True)
         self.initial_water_mass_line.setEnabled(True)
         self.initial_food_mass_line.setEnabled(True)
+        
 
         self.water_loss_line.setEnabled(False)
         self.steam_accumulation_line.setEnabled(False)
         self.sensor_humidity_line.setEnabled(False)
         self.steam_temp_line.setEnabled(False)
         
+        self.final_water_mass_line.setStatusTip('Final water mass can not be inputted until the end of the run')
+        self.final_food_mass_line.setStatusTip('Final food mass can not be inputted until the end of the run')
+        
     def reset_buttons(self):
         _translate = QtCore.QCoreApplication.translate
         self.resume_button.setEnabled(False)
         self.start_button.setEnabled(False)
+        
+        self.start_button.setStatusTip('All fields must be green before sensors\' data can be recorded')
+        self.resume_button.setStatusTip('Start recording sensors\' data first')
+        
         if self.start_button.text() == 'Stop':
             self.start_button.clicked.disconnect(self.stop_function)
             self.start_button.setText(_translate("MainWindow", "Start"))
             self.start_button.clicked.connect(self.start_function)
         
-    def new_run(self):
+    def reset(self):
         self.status_bar.setStatusTip('Inputs and outputs have been reset')
         constants.STATE = False
         self.flag = False
+        steamSensorFixture.reset_Dir()
         self.reset_Line_Edits()
         self.reset_buttons()
         self.count = 0
         self.format_initial_slope_list()
         self.graph_label.clear()
+        
 
 #----------------------------------------------------------------- DISABLE FUNCTIONS -------------------------------------------------------------------
     def disable_all(self):

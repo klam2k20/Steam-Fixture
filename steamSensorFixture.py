@@ -58,6 +58,9 @@ def new_Dir():
     file_path = path2 + "/" + str(counter)
     os.mkdir(file_path)
     os.chdir(file_path)
+    
+def reset_Dir():
+    os.chdir(constants.START_PATH)
         
 #--------------------------------------------------------------------- EXCEL FUNCTION -----------------------------------------------------------------------
 def excel_FileName():
@@ -80,11 +83,34 @@ def to_Humidity(raw):
 def input_to_df():
     input_dict = {'Steam Appliance':['Function', 'Food Load', 'Time Interval (min)', 'Cook Time (min)', 'Monitor Time (min)', 'Sensor Height (in)', 'Initial Water Mass (g)', 'Initial Food Mass (g)',
                     'Final Water Mass (g)', 'Final Food Mass (g)', 'Water Loss (g)','Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)', 'Average Steam Temperature (C)'],
-                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.COOK_TIME, constants.TIME, constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
+                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.COOK_TIME, constants.MONITOR_TIME, constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
                     constants.INITIAL_FOOD_MASS, constants.FINAL_WATER_MASS, constants.FINAL_FOOD_MASS, constants.WATER_LOSS, constants.STEAM_SENSOR_HUMIDITY, constants.STEAM_ACCUMULATION, 
                     average_steam_temperature()] }
     input_df = pd.DataFrame(input_dict)
     return input_df
+
+def check_Sensors():
+
+    try:
+        ADC = ADS1256.ADS1256()
+        ADC.ADS1256_init()
+
+        for i in range(10):
+            ADC_Value = ADC.ADS1256_GetAll()
+            analog_Steam_Sensor_1 = ADC_Value[constants.STEAM_SENSOR1]
+            analog_Steam_Sensor_2 = ADC_Value[constants.STEAM_SENSOR2]
+            analog_Steam_Sensor_3 = ADC_Value[constants.STEAM_SENSOR3]
+            humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
+            humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
+            humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
+            
+            if ((humidity_Steam_Sensor_1 > constants.THRESHOLD) | (humidity_Steam_Sensor_2 > constants.THRESHOLD) | (humidity_Steam_Sensor_3 > constants.THRESHOLD)):
+                return False
+        return True
+    
+    except :
+        GPIO.cleanup()
+        exit()
 
 #----------------------------------------------------------------- DATAFRAME FUNCTION -------------------------------------------------------------------
 def dataframe_Structure():
@@ -100,20 +126,16 @@ def update_Dataframe(updated_time, ADC_Value):
     humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
     humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
     humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
-
-    start_time = 0
-
-    if ((humidity_Steam_Sensor_1 >= constants.THRESHOLD) | (humidity_Steam_Sensor_2 >= constants.THRESHOLD) | (humidity_Steam_Sensor_3 >= constants.THRESHOLD)) & (start_time == 0):
-        start_time = updated_time
-
-    if start_time != 0:
+    if ((humidity_Steam_Sensor_1 >= constants.THRESHOLD) | (humidity_Steam_Sensor_2 >= constants.THRESHOLD) | (humidity_Steam_Sensor_3 >= constants.THRESHOLD)) & (constants.START_TIME == 0):
+        constants.START_TIME = updated_time
+    if constants.START_TIME != 0:
         new_row = {'Time (min)':updated_time, 
                 'Steam Sensor 1 (Count)':analog_Steam_Sensor_1, 'Humidity 1 (%)':humidity_Steam_Sensor_1,
                 'Steam Sensor 2 (Count)':analog_Steam_Sensor_2, 'Humidity 2 (%)':humidity_Steam_Sensor_2, 
                 'Steam Sensor 3 (Count)':analog_Steam_Sensor_3, 'Humidity 3 (%)':humidity_Steam_Sensor_3, 
                 'Steam Temp. (C)':read_temp(constants.TEMP_PROBE_STEAM), 'Surrounding Temp. (C)':read_temp(constants.TEMP_PROBE_SURR)}
         constants.df = constants.df.append(new_row, ignore_index = True)
-                    
+        
 def average_Steam_Sensor_Humidity():
     total = constants.df['Humidity 1 (%)'].sum() + constants.df['Humidity 2 (%)'].sum() + constants.df['Humidity 3 (%)'].sum()
     rows = len(constants.df.index)
@@ -134,7 +156,6 @@ def steam_Accumulation():
     return constants.df['Steam Accumulation (Count * min)'].sum()
 
 def record_data():
-    new_Dir()
     constants.STATE = True
     update_temp_id()
     try:
@@ -143,7 +164,7 @@ def record_data():
         ADC.ADS1256_init()
         while constants.STATE:
             ADC_Value = ADC.ADS1256_GetAll()
-            updated_time = constants.TIME/60
+            updated_time = constants.MONITOR_TIME/60
             update_Dataframe(updated_time, ADC_Value)
             time.sleep(2)
     except :
@@ -165,7 +186,7 @@ def steam_Accumulation_Graph():
     start_Interval = constants.df.iloc[0]['Time (min)']
     end_Interval = start_Interval + constants.TIME_INTERVAL
     derivative_time = dict()
-    while start_Interval < constants.TIME:
+    while start_Interval < constants.MONITOR_TIME:
         df2 = constants.df.loc[(constants.df['Time (min)'] >= start_Interval) & (constants.df['Time (min)'] <= end_Interval)]
         x = df2['Time (min)']
         y = df2['Steam Accumulation (Count * min)']

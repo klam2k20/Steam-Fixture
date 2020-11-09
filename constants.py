@@ -4,13 +4,14 @@ STEAM_SENSOR2 = 5
 STEAM_SENSOR3 = 4
 TEMP_PROBE_STEAM = ''
 TEMP_PROBE_SURR = ''
-THRESHOLD = 10
+THRESHOLD = 15
 TIME_INTERVAL = .5
 
 #------------------------------------------------------------------ VARIABLES  ------------------------------------------------------------------
 df = ''
 STATE = True
-TIME = 0
+START_TIME = 0
+MONITOR_TIME = 0
 
 #------------------------------------------------------------------ INPUTS ------------------------------------------------------------------
 STEAM_APPLIANCE = ''
