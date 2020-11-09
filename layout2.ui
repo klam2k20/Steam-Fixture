@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1005</width>
+    <height>546</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="steam_fixture_GUI">
+   <widget class="QListWidget" name="slope_list">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>170</y>
+      <width>341</width>
+      <height>181</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="timer_label">
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>380</y>
+      <width>341</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>TextLabel</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="graph_label">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>20</y>
+      <width>241</width>
+      <height>331</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>TextLabel</string>
+    </property>
+   </widget>
+   <widget class="QWidget" name="layoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>20</y>
+      <width>331</width>
+      <height>337</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="input_layout">
+     <item row="2" column="0">
+      <widget class="QLabel" name="food_load_label">
+       <property name="text">
+        <string>Food Load</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="function_label">
+       <property name="text">
+        <string>Function</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="steam_appliance_line"/>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="function_line"/>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="steam_appliance_label">
+       <property name="text">
+        <string>Steam Appliance</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="sensor_height_line"/>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="sensor_height_label">
+       <property name="text">
+        <string>Sensor Height</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="initial_water_mass_label">
+       <property name="text">
+        <string>Initial Water Mass</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QLineEdit" name="final_water_mass_line"/>
+     </item>
+     <item row="6" column="1">
+      <widget class="QLineEdit" name="initial_food_mass_line"/>
+     </item>
+     <item row="6" column="0">
+      <widget class="QLabel" name="initial_food_mass_label">
+       <property name="text">
+        <string>Initial Food Mass</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="final_water_mass_label">
+       <property name="text">
+        <string>Final Water Mass</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="cook_time_line"/>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="cook_time_label">
+       <property name="text">
+        <string>Cook Time</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="food_load_line"/>
+     </item>
+     <item row="5" column="1">
+      <widget class="QLineEdit" name="initial_water_mass_line"/>
+     </item>
+     <item row="8" column="1">
+      <widget class="QLineEdit" name="final_food_mass_line"/>
+     </item>
+     <item row="8" column="0">
+      <widget class="QLabel" name="final_food_mass_label">
+       <property name="text">
+        <string>Final Food Mass</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="1">
+      <widget class="QPushButton" name="resume_button">
+       <property name="text">
+        <string>Resume</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="layoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>450</y>
+      <width>343</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="button_layout">
+     <item>
+      <widget class="QPushButton" name="start_button">
+       <property name="text">
+        <string>Start</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="reset_button">
+       <property name="text">
+        <string>Reset</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="exit_button">
+       <property name="text">
+        <string>Exit</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="layoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>20</y>
+      <width>341</width>
+      <height>151</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="output_layout">
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="steam_accumulation_line"/>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="water_loss_line"/>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="sensor_humidity_line"/>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="steam_accumulation_label">
+       <property name="text">
+        <string>Steam Accumulation</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="water_loss_label">
+       <property name="text">
+        <string>Water Loss</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="steam_temp_line"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="sensor_humidity_label">
+       <property name="text">
+        <string>Sensors' Humidity</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="steam_temp_label">
+       <property name="text">
+        <string>Steam Temperature</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
