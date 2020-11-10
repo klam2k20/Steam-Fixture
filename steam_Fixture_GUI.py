@@ -146,7 +146,6 @@ class Ui_MainWindow(object):
         self.timer_label = QtWidgets.QLabel(self.steam_Fixture_GUI)
         self.timer_label.setGeometry(QtCore.QRect(350, 408, 300, 60))
         self.timer_label.setObjectName("timer_label")
-        self.timer_label.setStyleSheet("border : 1px solid black;")
         self.timer_label.setText('00:00:00') 
         self.timer_label.setAlignment(QtCore.Qt.AlignCenter)
         self.timer_label.setStatusTip('Timer')
@@ -160,13 +159,17 @@ class Ui_MainWindow(object):
     def showTime(self):
         if self.flag: 
             self.count+= 1
-            
         constants.MONITOR_TIME = self.count
         h = math.floor(self.count / 3600)
         m = math.floor((self.count % 3600) / 60)
         s = self.count % 3600 % 60
         text = '{0:02d}:{1:02d}:{2:02d}'.format(h,m,s)
         self.timer_label.setText(text)
+        if constants.START_TIME !=0:
+            self.timer_label.setStyleSheet("background-color: #c4df9b; border: 1px solid black;")
+            self.status_bar.setStatusTip('Steam detected.Recording sensors\' data')
+        else:
+            self.timer_label.setStyleSheet("background-color: #fff79a; border: 1px solid black;")
 
 #----------------------------------------------------------------- BUTTON FUNCTIONS -------------------------------------------------------------------
     def create_buttons(self):
@@ -197,7 +200,7 @@ class Ui_MainWindow(object):
         self.resume_button.setStatusTip('Start recording sensors\' data first')
 
     def start_function(self):
-        self.status_bar.setStatusTip('Recording sensors\' data')
+        self.status_bar.setStatusTip('Steam has not been detected')
         self.start_button.setStatusTip('Stop recording sensors\' data')
         _translate = QtCore.QCoreApplication.translate
         self.start_button.clicked.disconnect(self.start_function)
@@ -261,6 +264,7 @@ class Ui_MainWindow(object):
         self.resume_button.setEnabled(False)
         
         steamSensorFixture.new_Dir()
+        
         constants.FINAL_WATER_MASS = float(self.final_water_mass_line.text().strip())
         constants.FINAL_FOOD_MASS = float(self.final_food_mass_line.text().strip())
         constants.WATER_LOSS = (constants.INITIAL_FOOD_MASS + constants.INITIAL_WATER_MASS) - (constants.FINAL_FOOD_MASS + constants.FINAL_WATER_MASS)
@@ -522,8 +526,11 @@ class Ui_MainWindow(object):
     def dataframe_Empty_Check(self):
         return constants.df.empty
     
+    def calculate_monitor_time(self):
+        return (constants.df.iloc[-1]['Time (min)'] - constants.df.iloc[0]['Time (min)'])
+    
     def dataframe_Time_Interval_Check(self):
-        return constants.df.iloc[-1]['Time (min)'] < .5
+        return self.calculate_monitor_time() < .5
 
     def final_Mass_Popup(self):
         self.status_bar.setStatusTip('Input final masses')
@@ -542,7 +549,7 @@ class Ui_MainWindow(object):
     def dataframe_Empty_Popup(self):
         self.status_bar.setStatusTip('Error!')
         msg = QMessageBox()
-        msg.setText("Error! Theshold maybe too high.")
+        msg.setText("Error! No data recorded! Theshold maybe too high.")
         msg.setIcon(QMessageBox.Critical)            
         msg.exec()
         self.disable_all()
@@ -610,6 +617,8 @@ class Ui_MainWindow(object):
     def reset(self):
         self.status_bar.setStatusTip('Inputs and outputs have been reset')
         constants.STATE = False
+        constants.START_TIME = 0
+        constants.MONITOR_TIME = 0
         self.flag = False
         steamSensorFixture.reset_Dir()
         self.reset_Line_Edits()

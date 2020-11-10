@@ -45,7 +45,7 @@ def read_temp(id):
 def new_Dir():
     DATE = time.ctime().split(' ')
     path1 = os.getcwd() + '/' + 'RAW DATA'
-    path2 = path1 + "/" + DATE[1] + DATE[3]
+    path2 = path1 + "/" + DATE[1] + DATE[2]
     
     if not os.path.exists(path1):
         os.mkdir(path1)
@@ -83,7 +83,7 @@ def to_Humidity(raw):
 def input_to_df():
     input_dict = {'Steam Appliance':['Function', 'Food Load', 'Time Interval (min)', 'Cook Time (min)', 'Monitor Time (min)', 'Sensor Height (in)', 'Initial Water Mass (g)', 'Initial Food Mass (g)',
                     'Final Water Mass (g)', 'Final Food Mass (g)', 'Water Loss (g)','Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)', 'Average Steam Temperature (C)'],
-                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.COOK_TIME, constants.MONITOR_TIME, constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
+                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.COOK_TIME, (constants.df.iloc[-1]['Time (min)'] - constants.df.iloc[0]['Time (min)']), constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
                     constants.INITIAL_FOOD_MASS, constants.FINAL_WATER_MASS, constants.FINAL_FOOD_MASS, constants.WATER_LOSS, constants.STEAM_SENSOR_HUMIDITY, constants.STEAM_ACCUMULATION, 
                     average_steam_temperature()] }
     input_df = pd.DataFrame(input_dict)
