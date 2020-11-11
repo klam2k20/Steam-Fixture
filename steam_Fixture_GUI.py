@@ -4,7 +4,7 @@ import pandas as pd
 import math
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMessageBox, QApplication, QInputDialog
+from PyQt5.QtWidgets import QMessageBox, QApplication, QInputDialog, QWidget
 import constants
 import steamSensorFixture
 import  os
@@ -32,33 +32,50 @@ class myLineEdit(QtWidgets.QLineEdit):
         else:
             color = '#f6989d' # red
         self.setStyleSheet('QLineEdit { background-color: %s }' % color)
+
+class countdown_Window(QWidget):
+    def __init__(self, count):
+        super().__init__()
+        self.setFixedSize(150, 100)
+        qr = self.frameGeometry()
+        cp = QtWidgets.QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        self.setObjectName("CountDownWindow")
         
-class myMessageBox(QMessageBox):
-
-    def __init__(self, *__args):
-        QMessageBox.__init__(self)
-        self.timeout = 1
-        self.autoclose = False
-        self.currentTime = 0
-
-    def showEvent(self, QShowEvent):
-        self.currentTime = 0
-        if self.autoclose:
-            self.startTimer(1000)
-
-    def timerEvent(self, *args, **kwargs):
-        self.currentTime += 1
-        if self.currentTime >= self.timeout:
-            self.done(0)
-
-    def autoClose(text):
-        countDown = myMessageBox()
-        countDown.autoclose = True
-        countDown.setText(text)
-        countDown.setIcon(QMessageBox.Critical)
-        countDown.setStandardButtons(QMessageBox.Ok)
-        countDown.exec()
+        self.count = int(count - 1)
+        self.setup_countdown_label()
+        self.setup_countdown()
         
+        self.retranslateUi()
+
+    def setup_countdown_label(self):
+        self.countdown_label = QtWidgets.QLabel(self)
+        self.countdown_label.setGeometry(QtCore.QRect(0, 0, 150, 100))
+        self.countdown_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.countdown_label.setText('00:00:10')
+        font = self.font()
+        font.setPointSize(20)
+        font.setBold(True)
+        self.countdown_label.setFont(font)
+
+    def setup_countdown(self):
+        countdown = QtCore.QTimer(self)
+        countdown.timeout.connect(self.showTime)
+        countdown.start(1000)
+    
+    def showTime(self):
+        if self.count > 0:
+            text = '00:00:{0:02d}'.format(self.count)
+            self.countdown_label.setText(text)
+            self.count -=1
+        else:
+            self.close()
+    
+    def retranslateUi(self):
+        _translate = QtCore.QCoreApplication.translate
+        self.setWindowTitle(_translate("CountDownWindow", "Count Down"))
+
         
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -71,6 +88,8 @@ class Ui_MainWindow(object):
         qr.moveCenter(cp)
         MainWindow.move(qr.topLeft())
         
+        #COUNT DOWN WINDOW VARIABLE
+        self.countdown_window = None
         #STATUS BAR
         self.status_bar = QtWidgets.QStatusBar(MainWindow)
         self.status_bar.setObjectName('status_bar')
@@ -148,7 +167,6 @@ class Ui_MainWindow(object):
         MainWindow.show()
         self.temp_probe_popup()
 
-        
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Steam Fixture GUI"))
@@ -172,7 +190,6 @@ class Ui_MainWindow(object):
         self.steam_temp_label.setText(_translate("MainWindow", "Steam Temperature"))
         self.graph_label.setText(_translate("MainWindow", ""))
         
-        
 #----------------------------------------------------------------- TIMER FUNCTIONS -------------------------------------------------------------------
     def setup_timer_label(self):
         self.flag = False
@@ -195,11 +212,16 @@ class Ui_MainWindow(object):
             text = self.format_timer()
             self.timer_label.setText(text)
             if constants.UPDATED_TIME <= 10:
-                myMessageBox.autoClose(text)
+                self.countDown()
                 
             if constants.UPDATED_TIME == 1:
                 self.additional_time_input_dialog()
     
+    def countDown(self):
+        if self.countdown_window is None:
+            self.countdown_window = countdown_Window(constants.UPDATED_TIME)
+        self.countdown_window.show()
+
     def additional_time_input_dialog(self):
         additional_mins,ok = QInputDialog.getInt(self.steam_Fixture_GUI,"","Additional Monitor Time (min): ")
         if ok and additional_mins != 0:
@@ -679,9 +701,15 @@ class Ui_MainWindow(object):
         constants.UPDATED_TIME = -1
         constants.ADDITIONAL_MINS = -1
         constants.TEMP_PROBE_STATE = True
+        
     
     def reset_temp_probe(self):
         self.temp_probe_popup()
+    
+    def reset_countdown(self):
+        if self.countdown_window != None:
+            self.countdown_window.close()
+            self.countdown_window = None
         
     def reset(self):
         self.status_bar.setStatusTip('Inputs and outputs have been reset')
@@ -690,6 +718,7 @@ class Ui_MainWindow(object):
         self.reset_buttons()
         self.reset_timer()
         self.reset_variables()
+        self.reset_countdown()
         self.format_initial_slope_list()
         self.graph_label.clear()
         self.reset_temp_probe()
