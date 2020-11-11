@@ -4,7 +4,7 @@ import pandas as pd
 import math
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMessageBox, QApplication
+from PyQt5.QtWidgets import QMessageBox, QApplication, QInputDialog
 import constants
 import steamSensorFixture
 import  os
@@ -32,9 +32,37 @@ class myLineEdit(QtWidgets.QLineEdit):
         else:
             color = '#f6989d' # red
         self.setStyleSheet('QLineEdit { background-color: %s }' % color)
+        
+class myMessageBox(QMessageBox):
 
+    def __init__(self, *__args):
+        QMessageBox.__init__(self)
+        self.timeout = 1
+        self.autoclose = False
+        self.currentTime = 0
+
+    def showEvent(self, QShowEvent):
+        self.currentTime = 0
+        if self.autoclose:
+            self.startTimer(1000)
+
+    def timerEvent(self, *args, **kwargs):
+        self.currentTime += 1
+        if self.currentTime >= self.timeout:
+            self.done(0)
+
+    def autoClose(text):
+        countDown = myMessageBox()
+        countDown.autoclose = True
+        countDown.setText(text)
+        countDown.setIcon(QMessageBox.Critical)
+        countDown.setStandardButtons(QMessageBox.Ok)
+        countDown.exec()
+        
+        
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
+        constants.START_PATH = os.getcwd()
         self.threadpool = QtCore.QThreadPool()
         MainWindow.setObjectName("MainWindow")
         MainWindow.setFixedSize(1000, 550)
@@ -80,8 +108,10 @@ class Ui_MainWindow(object):
         #VALIDATORS
         regexp = QtCore.QRegExp(r"[\w]+")
         self.alphanumeric_validator = QtGui.QRegExpValidator(regexp)
-        regexp = QtCore.QRegExp(r"([1-9][0-9]*(\.[0-9]*[1-9])?|0\.[0-9]*[1-9])")
+        regexp = QtCore.QRegExp(r"([0-9][0-9]*(\.[0-9]*[1-9])?|0\.[0-9]*[1-9])")
         self.double_validator = QtGui.QRegExpValidator(regexp)
+        regexp = QtCore.QRegExp(r"([1-9][0-9]*(\.[0-9]*[1-9])?|0\.[0-9]*[1-9])")
+        self.positive_double_validator = QtGui.QRegExpValidator(regexp)
         regexp = QtCore.QRegExp(r"[a-zA-Z]+")
         self.string_validator = QtGui.QRegExpValidator(regexp)
 
@@ -113,13 +143,16 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.steam_Fixture_GUI)
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
         constants.START_PATH = os.getcwd()
+        MainWindow.show()
+        self.temp_probe_popup()
+
         
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Steam Fixture GUI"))
-        self.timer_label.setText(_translate("MainWindow", "TextLabel"))
-        self.graph_label.setText(_translate("MainWindow", "TextLabel"))
+        self.timer_label.setText(_translate("MainWindow", "00:00:00"))
         self.food_load_label.setText(_translate("MainWindow", "Food Load"))
         self.function_label.setText(_translate("MainWindow", "Function"))
         self.steam_appliance_label.setText(_translate("MainWindow", "Steam Appliance"))
@@ -127,7 +160,7 @@ class Ui_MainWindow(object):
         self.initial_water_mass_label.setText(_translate("MainWindow", "Initial Water Mass"))
         self.initial_food_mass_label.setText(_translate("MainWindow", "Initial Food Mass"))
         self.final_water_mass_label.setText(_translate("MainWindow", "Final Water Mass"))
-        self.cook_time_label.setText(_translate("MainWindow", "Cook Time"))
+        self.monitor_time_label.setText(_translate("MainWindow", "Monitor Time"))
         self.final_food_mass_label.setText(_translate("MainWindow", "Final Food Mass"))
         self.resume_button.setText(_translate("MainWindow", "Resume"))
         self.start_button.setText(_translate("MainWindow", "Start"))
@@ -139,32 +172,54 @@ class Ui_MainWindow(object):
         self.steam_temp_label.setText(_translate("MainWindow", "Steam Temperature"))
         self.graph_label.setText(_translate("MainWindow", ""))
         
+        
 #----------------------------------------------------------------- TIMER FUNCTIONS -------------------------------------------------------------------
     def setup_timer_label(self):
-        self.count = 0
         self.flag = False
         self.timer_label = QtWidgets.QLabel(self.steam_Fixture_GUI)
         self.timer_label.setGeometry(QtCore.QRect(350, 408, 300, 60))
         self.timer_label.setObjectName("timer_label")
-        self.timer_label.setText('00:00:00') 
         self.timer_label.setAlignment(QtCore.Qt.AlignCenter)
         self.timer_label.setStatusTip('Timer')
-        
-            
+        self.timer_background()
+   
     def setup_timer(self):
-        timer = QtCore.QTimer(self.steam_Fixture_GUI) 
-        timer.timeout.connect(self.showTime) 
+        timer = QtCore.QTimer(self.steam_Fixture_GUI)
+        timer.timeout.connect(self.showTime)
         timer.start(1000)
     
-    def showTime(self):
-        if self.flag: 
-            self.count+= 1
-        constants.MONITOR_TIME = self.count
-        h = math.floor(self.count / 3600)
-        m = math.floor((self.count % 3600) / 60)
-        s = self.count % 3600 % 60
+    def showTime(self):   
+        if self.flag:
+            self.timer_background()
+            constants.UPDATED_TIME-= 1
+            text = self.format_timer()
+            self.timer_label.setText(text)
+            if constants.UPDATED_TIME <= 10:
+                myMessageBox.autoClose(text)
+                
+            if constants.UPDATED_TIME == 1:
+                self.additional_time_input_dialog()
+    
+    def additional_time_input_dialog(self):
+        additional_mins,ok = QInputDialog.getInt(self.steam_Fixture_GUI,"","Additional Monitor Time (min): ")
+        if ok and additional_mins != 0:
+            constants.MONITOR_TIME += (additional_mins * 60)
+            constants.UPDATED_TIME += (additional_mins * 60)
+            self.flag = True
+        elif not ok or additional_mins == 0:
+            self.flag = False
+            constants.UPDATED_TIME -=1
+            self.timer_label.setText('00:00:00')
+            self.stop_function()
+            
+    def format_timer(self):
+        h = int(math.floor(constants.UPDATED_TIME / 3600))
+        m = int(math.floor((constants.UPDATED_TIME % 3600) / 60))
+        s = int(constants.UPDATED_TIME % 3600 % 60)
         text = '{0:02d}:{1:02d}:{2:02d}'.format(h,m,s)
-        self.timer_label.setText(text)
+        return text
+
+    def timer_background(self):
         if constants.START_TIME !=0:
             self.timer_label.setStyleSheet("background-color: #c4df9b; border: 1px solid black;")
             self.status_bar.setStatusTip('Steam detected.Recording sensors\' data')
@@ -197,20 +252,17 @@ class Ui_MainWindow(object):
         self.input_layout.addWidget(self.resume_button, 9, 1, 1, 1)
         self.resume_button.clicked.connect(self.resume_function)
         self.resume_button.setEnabled(False)
-        self.resume_button.setStatusTip('Start recording sensors\' data first')
+        self.resume_button.setStatusTip('Resume')
 
     def start_function(self):
         self.status_bar.setStatusTip('Steam has not been detected')
-        self.start_button.setStatusTip('Stop recording sensors\' data')
-        _translate = QtCore.QCoreApplication.translate
-        self.start_button.clicked.disconnect(self.start_function)
-        self.start_button.setText(_translate("MainWindow", "Stop"))
-        self.start_button.clicked.connect(self.stop_function)
-        
+        self.start_button.setStatusTip('Monitoring...')
+        self.start_button.setEnabled(False)
+    
         self.steam_appliance_line.setEnabled(False)
         self.function_line.setEnabled(False)
         self.food_load_line.setEnabled(False)
-        self.cook_time_line.setEnabled(False)
+        self.monitor_time_line.setEnabled(False)
         self.sensor_height_line.setEnabled(False)
         self.initial_water_mass_line.setEnabled(False)
         self.initial_food_mass_line.setEnabled(False)
@@ -218,7 +270,8 @@ class Ui_MainWindow(object):
         constants.STEAM_APPLIANCE = self.steam_appliance_line.text().strip()
         constants.FUNCTION = self.function_line.text().strip()
         constants.FOOD_LOAD = self.food_load_line.text().strip()
-        constants.COOK_TIME = float(self.cook_time_line.text().strip())
+        constants.MONITOR_TIME = float(self.monitor_time_line.text().strip()) * 60
+        constants.UPDATED_TIME = constants.MONITOR_TIME
         constants.SENSOR_HEIGHT = float(self.sensor_height_line.text().strip())
         constants.INITIAL_WATER_MASS = float(self.initial_water_mass_line.text().strip())
         constants.INITIAL_FOOD_MASS = float(self.initial_food_mass_line.text().strip())
@@ -230,8 +283,6 @@ class Ui_MainWindow(object):
         
     def stop_function(self):
         _translate = QtCore.QCoreApplication.translate
-        self.flag = False
-        constants.STATE = False
 
         if self.dataframe_Empty_Check():
             self.dataframe_Empty_Popup()
@@ -287,7 +338,6 @@ class Ui_MainWindow(object):
         self.graph_label.setPixmap(QtGui.QPixmap('Steam_Fixture_Graphs.png'))
         self.graph_label.setScaledContents(True)
         self.status_bar.setStatusTip('Done calculating results. Excel file has been exported')
-        
     
     def quit_function(self):
         self.status_bar.setStatusTip('Quitting')
@@ -323,9 +373,9 @@ class Ui_MainWindow(object):
         self.final_water_mass_label.setObjectName("final_water_mass_label")
         self.input_layout.addWidget(self.final_water_mass_label, 7, 0, 1, 1)
 
-        self.cook_time_label = QtWidgets.QLabel(self.layoutWidget)
-        self.cook_time_label.setObjectName("cook_time_label")
-        self.input_layout.addWidget(self.cook_time_label, 3, 0, 1, 1)
+        self.monitor_time_label = QtWidgets.QLabel(self.layoutWidget)
+        self.monitor_time_label.setObjectName("monitor_time_label")
+        self.input_layout.addWidget(self.monitor_time_label, 3, 0, 1, 1)
 
         self.final_food_mass_label = QtWidgets.QLabel(self.layoutWidget)
         self.final_food_mass_label.setObjectName("final_food_mass_label")
@@ -359,10 +409,10 @@ class Ui_MainWindow(object):
         self.input_layout.addWidget(self.initial_food_mass_line, 6, 1, 1, 1)
         self.initial_food_mass_line.setStatusTip('Input initial food mass')
 
-        self.cook_time_line = myLineEdit(self.layoutWidget)
-        self.cook_time_line.setObjectName("cook_time_line")
-        self.input_layout.addWidget(self.cook_time_line, 3, 1, 1, 1)
-        self.cook_time_line.setStatusTip('Input cook time')
+        self.monitor_time_line = myLineEdit(self.layoutWidget)
+        self.monitor_time_line.setObjectName("monitor_time_line")
+        self.input_layout.addWidget(self.monitor_time_line, 3, 1, 1, 1)
+        self.monitor_time_line.setStatusTip('Input cook time')
 
         self.food_load_line = myLineEdit(self.layoutWidget)
         self.food_load_line.setObjectName("food_load_line")
@@ -381,13 +431,13 @@ class Ui_MainWindow(object):
         self.final_food_mass_line.setEnabled(False)
 
     def validate_input_line_edits(self):
-        input_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.cook_time_line, self.sensor_height_line, self.initial_water_mass_line, self.initial_food_mass_line]
+        input_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.monitor_time_line, self.sensor_height_line, self.initial_water_mass_line, self.initial_food_mass_line]
 
         #Connect validator to line edits
         self.steam_appliance_line.setValidator(self.alphanumeric_validator)
         self.function_line.setValidator(self.string_validator)
         self.food_load_line.setValidator(self.string_validator)
-        self.cook_time_line.setValidator(self.double_validator)
+        self.monitor_time_line.setValidator(self.positive_double_validator)
         self.sensor_height_line.setValidator(self.double_validator)
         self.initial_water_mass_line.setValidator(self.double_validator)
         self.initial_food_mass_line.setValidator(self.double_validator)
@@ -399,7 +449,7 @@ class Ui_MainWindow(object):
             i.textChanged.connect(self.enable_start)
     
     def enable_start(self):
-        qLineEdit_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.cook_time_line, self.sensor_height_line, self.initial_water_mass_line,self.initial_food_mass_line]
+        qLineEdit_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.monitor_time_line, self.sensor_height_line, self.initial_water_mass_line,self.initial_food_mass_line]
         inputs_valid = True
         for q in qLineEdit_list:
             if q.validator().validate(q.text(), 0)[0] == QtGui.QValidator.Intermediate:
@@ -523,14 +573,24 @@ class Ui_MainWindow(object):
         
 
 #----------------------------------------------------------------- POPUP FUNCTIONS -------------------------------------------------------------------
+    def calculate_monitor_time(self):
+        return (constants.df.iloc[-1]['Time (min)'] - constants.df.iloc[0]['Time (min)'])
+        
     def dataframe_Empty_Check(self):
         return constants.df.empty
     
-    def calculate_monitor_time(self):
-        return (constants.df.iloc[-1]['Time (min)'] - constants.df.iloc[0]['Time (min)'])
-    
     def dataframe_Time_Interval_Check(self):
         return self.calculate_monitor_time() < .5
+
+    def temp_probe_popup(self):
+        steamSensorFixture.update_temp_id()
+        if not constants.TEMP_PROBE_STATE:
+            self.status_bar.setStatusTip('Error!')
+            msg = QMessageBox()
+            msg.setText('Error! Temperature probes are not connected correctly')
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+            self.disable_all()
 
     def final_Mass_Popup(self):
         self.status_bar.setStatusTip('Input final masses')
@@ -561,14 +621,13 @@ class Ui_MainWindow(object):
         msg.setIcon(QMessageBox.Critical)
         msg.exec()
         self.disable_all()
-        print(constants.df)
             
 #----------------------------------------------------------------- RESET FUNCTIONS -------------------------------------------------------------------
     def reset_Line_Edits(self):
         self.food_load_line.setText('')
         self.function_line.setText('')
         self.steam_appliance_line.setText('')
-        self.cook_time_line.setText('')
+        self.monitor_time_line.setText('')
         self.sensor_height_line.setText('')
         self.initial_food_mass_line.setText('')
         self.initial_water_mass_line.setText('')
@@ -587,7 +646,7 @@ class Ui_MainWindow(object):
         self.steam_appliance_line.setEnabled(True)
         self.function_line.setEnabled(True)
         self.food_load_line.setEnabled(True)
-        self.cook_time_line.setEnabled(True)
+        self.monitor_time_line.setEnabled(True)
         self.sensor_height_line.setEnabled(True)
         self.initial_water_mass_line.setEnabled(True)
         self.initial_food_mass_line.setEnabled(True)
@@ -608,24 +667,33 @@ class Ui_MainWindow(object):
         
         self.start_button.setStatusTip('All fields must be green before sensors\' data can be recorded')
         self.resume_button.setStatusTip('Start recording sensors\' data first')
-        
-        if self.start_button.text() == 'Stop':
-            self.start_button.clicked.disconnect(self.stop_function)
-            self.start_button.setText(_translate("MainWindow", "Start"))
-            self.start_button.clicked.connect(self.start_function)
+    
+    def reset_timer(self):
+        self.timer_label.setText('00:00:00')
+        self.flag = False
+        self.timer_label.setStyleSheet("background-color: #fff79a; border: 1px solid black;")
+    
+    def reset_variables(self):
+        constants.START_TIME = 0
+        constants.MONITOR_TIME = -1
+        constants.UPDATED_TIME = -1
+        constants.ADDITIONAL_MINS = -1
+        constants.TEMP_PROBE_STATE = True
+    
+    def reset_temp_probe(self):
+        self.temp_probe_popup()
         
     def reset(self):
         self.status_bar.setStatusTip('Inputs and outputs have been reset')
-        constants.STATE = False
-        constants.START_TIME = 0
-        constants.MONITOR_TIME = 0
-        self.flag = False
         steamSensorFixture.reset_Dir()
         self.reset_Line_Edits()
         self.reset_buttons()
-        self.count = 0
+        self.reset_timer()
+        self.reset_variables()
         self.format_initial_slope_list()
         self.graph_label.clear()
+        self.reset_temp_probe()
+        
         
 
 #----------------------------------------------------------------- DISABLE FUNCTIONS -------------------------------------------------------------------
@@ -637,7 +705,7 @@ class Ui_MainWindow(object):
         self.steam_appliance_line.setEnabled(False)
         self.function_line.setEnabled(False)
         self.food_load_line.setEnabled(False)
-        self.cook_time_line.setEnabled(False)
+        self.monitor_time_line.setEnabled(False)
         self.sensor_humidity_line.setEnabled(False)
         self.sensor_height_line.setEnabled(False)
         self.initial_food_mass_line.setEnabled(False)
@@ -652,5 +720,4 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
-    MainWindow.show()
     sys.exit(app.exec_())

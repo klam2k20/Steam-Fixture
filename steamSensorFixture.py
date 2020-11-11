@@ -21,7 +21,7 @@ def update_temp_id():
         constants.TEMP_PROBE_SURR = str(onlylinks[0])
         constants.TEMP_PROBE_STEAM = str(onlylinks[1])
     except IndexError:
-        print('Temperature probes are not correctly connected')
+        constants.TEMP_PROBE_STATE = False
 
 def read_temp_raw(id):
     base_dir = '/sys/bus/w1/devices/'
@@ -81,9 +81,9 @@ def to_Humidity(raw):
     return (raw/0x7fffff) * 100.00
 
 def input_to_df():
-    input_dict = {'Steam Appliance':['Function', 'Food Load', 'Time Interval (min)', 'Cook Time (min)', 'Monitor Time (min)', 'Sensor Height (in)', 'Initial Water Mass (g)', 'Initial Food Mass (g)',
+    input_dict = {'Steam Appliance':['Function', 'Food Load', 'Time Interval (min)', 'Cook Time (min)', 'Sensor Height (in)', 'Initial Water Mass (g)', 'Initial Food Mass (g)',
                     'Final Water Mass (g)', 'Final Food Mass (g)', 'Water Loss (g)','Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)', 'Average Steam Temperature (C)'],
-                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.COOK_TIME, (constants.df.iloc[-1]['Time (min)'] - constants.df.iloc[0]['Time (min)']), constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
+                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.MONITOR_TIME, constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
                     constants.INITIAL_FOOD_MASS, constants.FINAL_WATER_MASS, constants.FINAL_FOOD_MASS, constants.WATER_LOSS, constants.STEAM_SENSOR_HUMIDITY, constants.STEAM_ACCUMULATION, 
                     average_steam_temperature()] }
     input_df = pd.DataFrame(input_dict)
@@ -94,18 +94,17 @@ def check_Sensors():
     try:
         ADC = ADS1256.ADS1256()
         ADC.ADS1256_init()
+        ADC_Value = ADC.ADS1256_GetAll()
+        analog_Steam_Sensor_1 = ADC_Value[constants.STEAM_SENSOR1]
+        analog_Steam_Sensor_2 = ADC_Value[constants.STEAM_SENSOR2]
+        analog_Steam_Sensor_3 = ADC_Value[constants.STEAM_SENSOR3]
+        humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
+        humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
+        humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
 
-        for i in range(10):
-            ADC_Value = ADC.ADS1256_GetAll()
-            analog_Steam_Sensor_1 = ADC_Value[constants.STEAM_SENSOR1]
-            analog_Steam_Sensor_2 = ADC_Value[constants.STEAM_SENSOR2]
-            analog_Steam_Sensor_3 = ADC_Value[constants.STEAM_SENSOR3]
-            humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
-            humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
-            humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
-            
-            if ((humidity_Steam_Sensor_1 > constants.THRESHOLD) | (humidity_Steam_Sensor_2 > constants.THRESHOLD) | (humidity_Steam_Sensor_3 > constants.THRESHOLD)):
-                return False
+        if ((humidity_Steam_Sensor_1 > constants.THRESHOLD) | (humidity_Steam_Sensor_2 > constants.THRESHOLD) | (humidity_Steam_Sensor_3 > constants.THRESHOLD)):
+            return False
+
         return True
     
     except :
@@ -126,6 +125,7 @@ def update_Dataframe(updated_time, ADC_Value):
     humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
     humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
     humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
+
     if ((humidity_Steam_Sensor_1 >= constants.THRESHOLD) | (humidity_Steam_Sensor_2 >= constants.THRESHOLD) | (humidity_Steam_Sensor_3 >= constants.THRESHOLD)) & (constants.START_TIME == 0):
         constants.START_TIME = updated_time
     if constants.START_TIME != 0:
@@ -156,20 +156,19 @@ def steam_Accumulation():
     return constants.df['Steam Accumulation (Count * min)'].sum()
 
 def record_data():
-    constants.STATE = True
-    update_temp_id()
     try:
         constants.df = dataframe_Structure()
         ADC = ADS1256.ADS1256()
         ADC.ADS1256_init()
-        while constants.STATE:
+        while constants.UPDATED_TIME > 0:
             ADC_Value = ADC.ADS1256_GetAll()
-            updated_time = constants.MONITOR_TIME/60
+            updated_time = constants.MONITOR_TIME/60 - constants.UPDATED_TIME/60
             update_Dataframe(updated_time, ADC_Value)
             time.sleep(2)
+
+        
     except :
         GPIO.cleanup()
-        print ("\r\nProgram end     ")
         exit()
 
 #----------------------------------------------------------------- GRAPH FUNCTION -------------------------------------------------------------------
@@ -193,7 +192,7 @@ def steam_Accumulation_Graph():
         if not x.empty and not y.empty:
             m,b = np.polyfit(x,y,1)
             plt.plot(x,y,'ro')
-            best_fit, = plt.plot(x, m*x+b)
+            plt.plot(x, m*x+b)
             derivative_time[m] = start_Interval
         start_Interval = end_Interval
         end_Interval = start_Interval + constants.TIME_INTERVAL

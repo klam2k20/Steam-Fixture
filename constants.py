@@ -6,18 +6,20 @@ TEMP_PROBE_STEAM = ''
 TEMP_PROBE_SURR = ''
 THRESHOLD = 15
 TIME_INTERVAL = .5
+START_PATH = ''
 
 #------------------------------------------------------------------ VARIABLES  ------------------------------------------------------------------
 df = ''
-STATE = True
 START_TIME = 0
-MONITOR_TIME = 0
+UPDATED_TIME = -1
+ADDITIONAL_MINS = -1
+TEMP_PROBE_STATE = True
 
 #------------------------------------------------------------------ INPUTS ------------------------------------------------------------------
 STEAM_APPLIANCE = ''
 FUNCTION = ''
 FOOD_LOAD = ''
-COOK_TIME = 0
+MONITOR_TIME = -1
 SENSOR_HEIGHT = 0
 INITIAL_WATER_MASS = 0
 FINAL_WATER_MASS = 0
