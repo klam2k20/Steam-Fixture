@@ -101,7 +101,7 @@ class Ui_MainWindow(object):
 
         #LAYOUTS
         self.layoutWidget = QtWidgets.QWidget(self.steam_Fixture_GUI)
-        self.layoutWidget.setGeometry(QtCore.QRect(20, 20, 310, 340))
+        self.layoutWidget.setGeometry(QtCore.QRect(20, 20, 310, 356))
         self.layoutWidget.setObjectName("layoutWidget")
 
         self.input_layout = QtWidgets.QGridLayout(self.layoutWidget)
@@ -174,6 +174,7 @@ class Ui_MainWindow(object):
         self.food_load_label.setText(_translate("MainWindow", "Food Load"))
         self.function_label.setText(_translate("MainWindow", "Function"))
         self.steam_appliance_label.setText(_translate("MainWindow", "Steam Appliance"))
+        self.threshold_label.setText(_translate("MainWindow", "Sensor Threshold"))
         self.sensor_height_label.setText(_translate("MainWindow", "Sensor Height"))
         self.initial_water_mass_label.setText(_translate("MainWindow", "Initial Water Mass"))
         self.initial_food_mass_label.setText(_translate("MainWindow", "Initial Food Mass"))
@@ -271,7 +272,7 @@ class Ui_MainWindow(object):
 
         self.resume_button = QtWidgets.QPushButton(self.layoutWidget)
         self.resume_button.setObjectName("resume_button")
-        self.input_layout.addWidget(self.resume_button, 9, 1, 1, 1)
+        self.input_layout.addWidget(self.resume_button, 10, 1, 1, 1)
         self.resume_button.clicked.connect(self.resume_function)
         self.resume_button.setEnabled(False)
         self.resume_button.setStatusTip('Resume')
@@ -286,6 +287,7 @@ class Ui_MainWindow(object):
         self.food_load_line.setEnabled(False)
         self.monitor_time_line.setEnabled(False)
         self.sensor_height_line.setEnabled(False)
+        self.threshold_line.setEnabled(False)
         self.initial_water_mass_line.setEnabled(False)
         self.initial_food_mass_line.setEnabled(False)
 
@@ -385,15 +387,15 @@ class Ui_MainWindow(object):
 
         self.initial_water_mass_label = QtWidgets.QLabel(self.layoutWidget)
         self.initial_water_mass_label.setObjectName("initial_water_mass_label")
-        self.input_layout.addWidget(self.initial_water_mass_label, 5, 0, 1, 1)
+        self.input_layout.addWidget(self.initial_water_mass_label, 6, 0, 1, 1)
 
         self.initial_food_mass_label = QtWidgets.QLabel(self.layoutWidget)
         self.initial_food_mass_label.setObjectName("initial_food_mass_label")
-        self.input_layout.addWidget(self.initial_food_mass_label, 6, 0, 1, 1)
+        self.input_layout.addWidget(self.initial_food_mass_label, 7, 0, 1, 1)
 
         self.final_water_mass_label = QtWidgets.QLabel(self.layoutWidget)
         self.final_water_mass_label.setObjectName("final_water_mass_label")
-        self.input_layout.addWidget(self.final_water_mass_label, 7, 0, 1, 1)
+        self.input_layout.addWidget(self.final_water_mass_label, 8, 0, 1, 1)
 
         self.monitor_time_label = QtWidgets.QLabel(self.layoutWidget)
         self.monitor_time_label.setObjectName("monitor_time_label")
@@ -401,7 +403,11 @@ class Ui_MainWindow(object):
 
         self.final_food_mass_label = QtWidgets.QLabel(self.layoutWidget)
         self.final_food_mass_label.setObjectName("final_food_mass_label")
-        self.input_layout.addWidget(self.final_food_mass_label, 8, 0, 1, 1)
+        self.input_layout.addWidget(self.final_food_mass_label, 9, 0, 1, 1)
+        
+        self.threshold_label = QtWidgets.QLabel(self.layoutWidget)
+        self.threshold_label.setObjectName("threshold_label")
+        self.input_layout.addWidget(self.threshold_label, 5, 0, 1, 1)
 
 #----------------------------------------------------------------- INPUT FUNCTIONS -------------------------------------------------------------------
     def create_input_line_edits(self):
@@ -422,13 +428,13 @@ class Ui_MainWindow(object):
 
         self.final_water_mass_line = myLineEdit(self.layoutWidget)
         self.final_water_mass_line.setObjectName("final_water_mass_line")
-        self.input_layout.addWidget(self.final_water_mass_line, 7, 1, 1, 1)
+        self.input_layout.addWidget(self.final_water_mass_line, 8, 1, 1, 1)
         self.final_water_mass_line.setStatusTip('Final water mass can not be inputted until the end of the run')
         self.final_water_mass_line.setEnabled(False)
 
         self.initial_food_mass_line = myLineEdit(self.layoutWidget)
         self.initial_food_mass_line.setObjectName("initial_food_mass_line")
-        self.input_layout.addWidget(self.initial_food_mass_line, 6, 1, 1, 1)
+        self.input_layout.addWidget(self.initial_food_mass_line, 7, 1, 1, 1)
         self.initial_food_mass_line.setStatusTip('Input initial food mass')
 
         self.monitor_time_line = myLineEdit(self.layoutWidget)
@@ -441,19 +447,25 @@ class Ui_MainWindow(object):
         self.input_layout.addWidget(self.food_load_line, 2, 1, 1, 1)
         self.food_load_line.setStatusTip('Input food load')
 
+        self.threshold_line = myLineEdit(self.layoutWidget)
+        self.threshold_line.setObjectName("threshold_line")
+        self.threshold_line.setText('10')
+        self.input_layout.addWidget(self.threshold_line, 5, 1, 1, 1)
+        self.threshold_line.setStatusTip('Input steam sensor threshold')
+        
         self.initial_water_mass_line = myLineEdit(self.layoutWidget)
         self.initial_water_mass_line.setObjectName("initial_water_mass_line")
-        self.input_layout.addWidget(self.initial_water_mass_line, 5, 1, 1, 1)
+        self.input_layout.addWidget(self.initial_water_mass_line, 6, 1, 1, 1)
         self.initial_water_mass_line.setStatusTip('Input initial water mass')
 
         self.final_food_mass_line = myLineEdit(self.layoutWidget)
         self.final_food_mass_line.setObjectName("final_food_mass_line")
-        self.input_layout.addWidget(self.final_food_mass_line, 8, 1, 1, 1)
+        self.input_layout.addWidget(self.final_food_mass_line, 9, 1, 1, 1)
         self.final_food_mass_line.setStatusTip('Final food mass can not be inputted until the end of the run')
         self.final_food_mass_line.setEnabled(False)
 
     def validate_input_line_edits(self):
-        input_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.monitor_time_line, self.sensor_height_line, self.initial_water_mass_line, self.initial_food_mass_line]
+        input_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.monitor_time_line, self.sensor_height_line, self.threshold_line, self.initial_water_mass_line, self.initial_food_mass_line]
 
         #Connect validator to line edits
         self.steam_appliance_line.setValidator(self.alphanumeric_validator)
@@ -461,6 +473,7 @@ class Ui_MainWindow(object):
         self.food_load_line.setValidator(self.string_validator)
         self.monitor_time_line.setValidator(self.positive_double_validator)
         self.sensor_height_line.setValidator(self.double_validator)
+        self.threshold_line.setValidator(self.double_validator)
         self.initial_water_mass_line.setValidator(self.double_validator)
         self.initial_food_mass_line.setValidator(self.double_validator)
 
@@ -471,12 +484,13 @@ class Ui_MainWindow(object):
             i.textChanged.connect(self.enable_start)
     
     def enable_start(self):
-        qLineEdit_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.monitor_time_line, self.sensor_height_line, self.initial_water_mass_line,self.initial_food_mass_line]
+        qLineEdit_list = [self.steam_appliance_line, self.function_line, self.food_load_line, self.monitor_time_line, self.sensor_height_line, self.threshold_line, self.initial_water_mass_line,self.initial_food_mass_line]
         inputs_valid = True
         for q in qLineEdit_list:
             if q.validator().validate(q.text(), 0)[0] == QtGui.QValidator.Intermediate:
                 inputs_valid = False
         if inputs_valid:
+            constants.THRESHOLD = float(self.threshold_line.text().strip())
             if steamSensorFixture.check_Sensors():
                 self.start_button.setEnabled(True)
             else:
@@ -537,7 +551,7 @@ class Ui_MainWindow(object):
     
     def create_slope_list(self):
         self.slope_list = QtWidgets.QListWidget(self.steam_Fixture_GUI)
-        self.slope_list.setGeometry(QtCore.QRect(350, 200, 300, 160))
+        self.slope_list.setGeometry(QtCore.QRect(350, 200, 300, 176))
         self.slope_list.setObjectName("slope_list")
 
         item = QtWidgets.QListWidgetItem()
@@ -588,7 +602,7 @@ class Ui_MainWindow(object):
     def create_graph_pixmap(self):
         
         self.graph_label = QtWidgets.QLabel(self.steam_Fixture_GUI)
-        self.graph_label.setGeometry(QtCore.QRect(670, 20, 310, 340))
+        self.graph_label.setGeometry(QtCore.QRect(670, 20, 310, 356))
         self.graph_label.setObjectName("graph_label")
         self.graph_label.setStyleSheet("border : 1px solid black;")
         self.graph_label.setStatusTip('Graphs')
@@ -651,6 +665,7 @@ class Ui_MainWindow(object):
         self.steam_appliance_line.setText('')
         self.monitor_time_line.setText('')
         self.sensor_height_line.setText('')
+        self.threshold_line.setText('10')
         self.initial_food_mass_line.setText('')
         self.initial_water_mass_line.setText('')
         self.final_food_mass_line.setText('')
@@ -670,6 +685,7 @@ class Ui_MainWindow(object):
         self.food_load_line.setEnabled(True)
         self.monitor_time_line.setEnabled(True)
         self.sensor_height_line.setEnabled(True)
+        self.threshold_line.setEnabled(True)
         self.initial_water_mass_line.setEnabled(True)
         self.initial_food_mass_line.setEnabled(True)
         
@@ -701,6 +717,7 @@ class Ui_MainWindow(object):
         constants.UPDATED_TIME = -1
         constants.ADDITIONAL_MINS = -1
         constants.TEMP_PROBE_STATE = True
+        constants.THRESHOLD = 10
         
     
     def reset_temp_probe(self):
@@ -737,6 +754,7 @@ class Ui_MainWindow(object):
         self.monitor_time_line.setEnabled(False)
         self.sensor_humidity_line.setEnabled(False)
         self.sensor_height_line.setEnabled(False)
+        self.threshold_line.setEnabled(False)
         self.initial_food_mass_line.setEnabled(False)
         self.initial_water_mass_line.setEnabled(False)
     
