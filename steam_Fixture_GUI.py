@@ -33,6 +33,30 @@ class myLineEdit(QtWidgets.QLineEdit):
             color = '#f6989d' # red
         self.setStyleSheet('QLineEdit { background-color: %s }' % color)
 
+class graph_Window(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(500, 500)
+        qr = self.frameGeometry()
+        cp = QtWidgets.QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        self.setObjectName("GraphWindow")
+        
+        self.update_graph_label()
+        self.retranslateUi()
+    
+    def retranslateUi(self):
+        _translate = QtCore.QCoreApplication.translate
+        self.setWindowTitle(_translate("GraphWindow", "Graphs"))
+    
+    def update_graph_label(self):
+        self.graph_label = QtWidgets.QLabel(self)
+        self.graph_label.setGeometry(QtCore.QRect(0, 0, 500, 500))
+        self.graph_label.setObjectName("graph_label")
+        self.graph_label.setPixmap(QtGui.QPixmap('Steam_Fixture_Graphs.png'))
+        self.graph_label.setScaledContents(True)
+
 class countdown_Window(QWidget):
     def __init__(self, count):
         super().__init__()
@@ -82,7 +106,7 @@ class Ui_MainWindow(object):
         constants.START_PATH = os.getcwd()
         self.threadpool = QtCore.QThreadPool()
         MainWindow.setObjectName("MainWindow")
-        MainWindow.setFixedSize(1000, 550)
+        MainWindow.setFixedSize(800, 550)
         qr = MainWindow.frameGeometry()
         cp = QtWidgets.QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
@@ -90,6 +114,10 @@ class Ui_MainWindow(object):
         
         #COUNT DOWN WINDOW VARIABLE
         self.countdown_window = None
+
+        #GRAPH WINDOW VARIABLE
+        self.graph_window = None
+
         #STATUS BAR
         self.status_bar = QtWidgets.QStatusBar(MainWindow)
         self.status_bar.setObjectName('status_bar')
@@ -101,7 +129,7 @@ class Ui_MainWindow(object):
 
         #LAYOUTS
         self.layoutWidget = QtWidgets.QWidget(self.steam_Fixture_GUI)
-        self.layoutWidget.setGeometry(QtCore.QRect(20, 20, 310, 356))
+        self.layoutWidget.setGeometry(QtCore.QRect(20, 20, 370, 340))
         self.layoutWidget.setObjectName("layoutWidget")
 
         self.input_layout = QtWidgets.QGridLayout(self.layoutWidget)
@@ -109,7 +137,7 @@ class Ui_MainWindow(object):
         self.input_layout.setObjectName("input_layout")
 
         self.layoutWidget1 = QtWidgets.QWidget(self.steam_Fixture_GUI)
-        self.layoutWidget1.setGeometry(QtCore.QRect(350, 488, 300, 32))
+        self.layoutWidget1.setGeometry(QtCore.QRect(250, 488, 300, 32))
         self.layoutWidget1.setObjectName("layoutWidget1")
 
         self.button_layout = QtWidgets.QHBoxLayout(self.layoutWidget1)
@@ -117,7 +145,7 @@ class Ui_MainWindow(object):
         self.button_layout.setObjectName("button_layout")
 
         self.layoutWidget2 = QtWidgets.QWidget(self.steam_Fixture_GUI)
-        self.layoutWidget2.setGeometry(QtCore.QRect(350, 20, 300, 160))
+        self.layoutWidget2.setGeometry(QtCore.QRect(410, 20, 370, 160))
         self.layoutWidget2.setObjectName("layoutWidget2")
 
         self.output_layout = QtWidgets.QGridLayout(self.layoutWidget2)
@@ -153,9 +181,6 @@ class Ui_MainWindow(object):
         #CREATE BUTTONS
         self.create_buttons()
 
-        #CREATE GRAPH
-        self.create_graph_pixmap()
-
         #VALIDATE QLINEEDIT INPUTS
         self.validate_input_line_edits()
 
@@ -175,27 +200,26 @@ class Ui_MainWindow(object):
         self.function_label.setText(_translate("MainWindow", "Function"))
         self.steam_appliance_label.setText(_translate("MainWindow", "Steam Appliance"))
         self.threshold_label.setText(_translate("MainWindow", "Sensor Threshold"))
-        self.sensor_height_label.setText(_translate("MainWindow", "Sensor Height"))
-        self.initial_water_mass_label.setText(_translate("MainWindow", "Initial Water Mass"))
-        self.initial_food_mass_label.setText(_translate("MainWindow", "Initial Food Mass"))
-        self.final_water_mass_label.setText(_translate("MainWindow", "Final Water Mass"))
-        self.monitor_time_label.setText(_translate("MainWindow", "Monitor Time"))
-        self.final_food_mass_label.setText(_translate("MainWindow", "Final Food Mass"))
+        self.sensor_height_label.setText(_translate("MainWindow", "Sensor Height (in)"))
+        self.initial_water_mass_label.setText(_translate("MainWindow", "Initial Water Mass (g)"))
+        self.initial_food_mass_label.setText(_translate("MainWindow", "Initial Food Mass (g)"))
+        self.final_water_mass_label.setText(_translate("MainWindow", "Final Water Mass (g)"))
+        self.monitor_time_label.setText(_translate("MainWindow", "Monitor Time (min)"))
+        self.final_food_mass_label.setText(_translate("MainWindow", "Final Food Mass (g)"))
         self.resume_button.setText(_translate("MainWindow", "Resume"))
         self.start_button.setText(_translate("MainWindow", "Start"))
         self.reset_button.setText(_translate("MainWindow", "Reset"))
         self.exit_button.setText(_translate("MainWindow", "Exit"))
-        self.steam_accumulation_label.setText(_translate("MainWindow", "Steam Accumulation"))
-        self.water_loss_label.setText(_translate("MainWindow", "Water Loss"))
-        self.sensor_humidity_label.setText(_translate("MainWindow", "Sensors\' Humidity"))
-        self.steam_temp_label.setText(_translate("MainWindow", "Steam Temperature"))
-        self.graph_label.setText(_translate("MainWindow", ""))
+        self.steam_accumulation_label.setText(_translate("MainWindow", "Steam Accumulation \n (Count * min)"))
+        self.water_loss_label.setText(_translate("MainWindow", "Water Loss (g)"))
+        self.sensor_humidity_label.setText(_translate("MainWindow", "Sensors\' Humidity (%)"))
+        self.steam_temp_label.setText(_translate("MainWindow", "Steam Temperature (C)"))
         
 #----------------------------------------------------------------- TIMER FUNCTIONS -------------------------------------------------------------------
     def setup_timer_label(self):
         self.flag = False
         self.timer_label = QtWidgets.QLabel(self.steam_Fixture_GUI)
-        self.timer_label.setGeometry(QtCore.QRect(350, 408, 300, 60))
+        self.timer_label.setGeometry(QtCore.QRect(250, 407, 300, 60))
         self.timer_label.setObjectName("timer_label")
         self.timer_label.setAlignment(QtCore.Qt.AlignCenter)
         self.timer_label.setStatusTip('Timer')
@@ -224,8 +248,9 @@ class Ui_MainWindow(object):
         self.countdown_window.show()
 
     def additional_time_input_dialog(self):
-        additional_mins,ok = QInputDialog.getInt(self.steam_Fixture_GUI,"","Additional Monitor Time (min): ")
+        additional_mins,ok = QInputDialog.getInt(self.steam_Fixture_GUI,"ADD TIME","Additional Monitor Time (min): ")
         if ok and additional_mins != 0:
+            self.countdown_window = None
             constants.MONITOR_TIME += (additional_mins * 60)
             constants.UPDATED_TIME += (additional_mins * 60)
             self.flag = True
@@ -244,7 +269,9 @@ class Ui_MainWindow(object):
 
     def timer_background(self):
         if constants.START_TIME !=0:
+            self.temp_probe_popup()
             self.timer_label.setStyleSheet("background-color: #c4df9b; border: 1px solid black;")
+
             self.status_bar.setStatusTip('Steam detected.Recording sensors\' data')
         else:
             self.timer_label.setStyleSheet("background-color: #fff79a; border: 1px solid black;")
@@ -359,8 +386,10 @@ class Ui_MainWindow(object):
         derivative_df = self.format_final_slope_list(derivative_time)
         plt.savefig('Steam_Fixture_Graphs.png')
         steamSensorFixture.dataframe_to_Excel(derivative_df)
-        self.graph_label.setPixmap(QtGui.QPixmap('Steam_Fixture_Graphs.png'))
-        self.graph_label.setScaledContents(True)
+        if self.graph_window is None:
+            self.graph_window = graph_Window()
+        self.graph_window.show()
+
         self.status_bar.setStatusTip('Done calculating results. Excel file has been exported')
     
     def quit_function(self):
@@ -491,6 +520,7 @@ class Ui_MainWindow(object):
                 inputs_valid = False
         if inputs_valid:
             constants.THRESHOLD = float(self.threshold_line.text().strip())
+            
             if steamSensorFixture.check_Sensors():
                 self.start_button.setEnabled(True)
             else:
@@ -551,7 +581,7 @@ class Ui_MainWindow(object):
     
     def create_slope_list(self):
         self.slope_list = QtWidgets.QListWidget(self.steam_Fixture_GUI)
-        self.slope_list.setGeometry(QtCore.QRect(350, 200, 300, 176))
+        self.slope_list.setGeometry(QtCore.QRect(410, 200, 370, 160))
         self.slope_list.setObjectName("slope_list")
 
         item = QtWidgets.QListWidgetItem()
@@ -598,16 +628,7 @@ class Ui_MainWindow(object):
                 item.setText(_translate("MainWindow", ' {0}. {1:.2f} @ {2:.2f}'.format(counter, derivative, d[derivative])))
                 counter +=1
         return derivative_df
-
-    def create_graph_pixmap(self):
         
-        self.graph_label = QtWidgets.QLabel(self.steam_Fixture_GUI)
-        self.graph_label.setGeometry(QtCore.QRect(670, 20, 310, 356))
-        self.graph_label.setObjectName("graph_label")
-        self.graph_label.setStyleSheet("border : 1px solid black;")
-        self.graph_label.setStatusTip('Graphs')
-        
-
 #----------------------------------------------------------------- POPUP FUNCTIONS -------------------------------------------------------------------
     def calculate_monitor_time(self):
         return (constants.df.iloc[-1]['Time (min)'] - constants.df.iloc[0]['Time (min)'])
@@ -727,6 +748,11 @@ class Ui_MainWindow(object):
         if self.countdown_window != None:
             self.countdown_window.close()
             self.countdown_window = None
+    
+    def reset_graph(self):
+        if self.graph_window != None:
+            self.graph_window.close()
+            self.graph_window = None
         
     def reset(self):
         self.status_bar.setStatusTip('Inputs and outputs have been reset')
@@ -736,8 +762,8 @@ class Ui_MainWindow(object):
         self.reset_timer()
         self.reset_variables()
         self.reset_countdown()
+        self.reset_graph()
         self.format_initial_slope_list()
-        self.graph_label.clear()
         self.reset_temp_probe()
         
         
@@ -746,6 +772,7 @@ class Ui_MainWindow(object):
     def disable_all(self):
         self.disable_buttons()
         self.disable_line_edits()
+        self.flag = False
         
     def disable_line_edits(self):
         self.steam_appliance_line.setEnabled(False)

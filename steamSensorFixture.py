@@ -24,22 +24,29 @@ def update_temp_id():
         constants.TEMP_PROBE_STATE = False
 
 def read_temp_raw(id):
-    base_dir = '/sys/bus/w1/devices/'
-    thermo_file = glob.glob(base_dir + id)[0] + '/w1_slave'
-    f = open(thermo_file, 'r')
-    lines = f.readlines()
-    f.close()
-    return lines
+    try:
+        base_dir = '/sys/bus/w1/devices/'
+        thermo_file = glob.glob(base_dir + id)[0] + '/w1_slave'
+        f = open(thermo_file, 'r')
+        lines = f.readlines()
+        f.close()
+        return lines
+    except FileNotFoundError:
+        constants.TEMP_PROBE_STATE = False
  
 def read_temp(id):
-    lines = read_temp_raw(id)
-    while lines[0].strip()[-3:] != 'YES':
+    try:
         lines = read_temp_raw(id)
-    equals_pos = lines[1].find('t=')
-    if equals_pos != -1:
-        temp_string = lines[1][equals_pos+2:]
-        temp_c = float(temp_string) / 1000.0
-        return temp_c
+        while lines[0].strip()[-3:] != 'YES':
+            lines = read_temp_raw(id)
+        equals_pos = lines[1].find('t=')
+        if equals_pos != -1:
+            temp_string = lines[1][equals_pos+2:]
+            temp_c = float(temp_string) / 1000.0
+            return temp_c
+    except IndexError or TypeError:
+        constants.TEMP_PROBE_STATE = False
+
 
 #--------------------------------------------------------------------- DIRECTORY FUNCTION -----------------------------------------------------------------------
 def new_Dir():
@@ -83,7 +90,7 @@ def to_Humidity(raw):
 def input_to_df():
     input_dict = {'Steam Appliance':['Function', 'Food Load', 'Time Interval (min)', 'Cook Time (min)', 'Sensor Height (in)', 'Initial Water Mass (g)', 'Initial Food Mass (g)',
                     'Final Water Mass (g)', 'Final Food Mass (g)', 'Water Loss (g)','Average Steam Sensor Humidity (%)', 'Steam Accumulation (Count * min)', 'Average Steam Temperature (C)'],
-                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.MONITOR_TIME, constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
+                    constants.STEAM_APPLIANCE: [constants.FUNCTION, constants.FOOD_LOAD, constants.TIME_INTERVAL, constants.MONITOR_TIME/60, constants.SENSOR_HEIGHT, constants.INITIAL_WATER_MASS, 
                     constants.INITIAL_FOOD_MASS, constants.FINAL_WATER_MASS, constants.FINAL_FOOD_MASS, constants.WATER_LOSS, constants.STEAM_SENSOR_HUMIDITY, constants.STEAM_ACCUMULATION, 
                     average_steam_temperature()] }
     input_df = pd.DataFrame(input_dict)
@@ -125,7 +132,6 @@ def update_Dataframe(updated_time, ADC_Value):
     humidity_Steam_Sensor_1 = to_Humidity(analog_Steam_Sensor_1)
     humidity_Steam_Sensor_2 = to_Humidity(analog_Steam_Sensor_2)
     humidity_Steam_Sensor_3 = to_Humidity(analog_Steam_Sensor_3)
-
     if ((humidity_Steam_Sensor_1 >= constants.THRESHOLD) | (humidity_Steam_Sensor_2 >= constants.THRESHOLD) | (humidity_Steam_Sensor_3 >= constants.THRESHOLD)) & (constants.START_TIME == 0):
         constants.START_TIME = updated_time
     if constants.START_TIME != 0:
@@ -166,7 +172,6 @@ def record_data():
             update_Dataframe(updated_time, ADC_Value)
             time.sleep(2)
 
-        
     except :
         GPIO.cleanup()
         exit()
